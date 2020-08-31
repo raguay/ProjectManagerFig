@@ -193,6 +193,7 @@
         // It's a new Project directory. Get a name.
         //
         currentProject = 'New';
+        currentProjectDir = dir;
         showDialog = true;
         runCleanUp = FinishNewProject;
       }
