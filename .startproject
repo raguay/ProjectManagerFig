@@ -1,0 +1,4 @@
+#!/usr/local/bin/fish
+
+echo "Fig Project Manager"
+
