@@ -29,7 +29,7 @@
     // Get the project manager application information.
     //
     fig.appread('projectmanager.json',(data, err) => {
-      console.log(!err);
+      console.log(err);
       console.log(data);
       if(!err) {
         appData = JSON.parse(data);
