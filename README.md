@@ -3,12 +3,15 @@
 This is a project manager application for the [fig](https://docs.withfig.com/) terminal 
 assistant. This app will tie into my [Project Manager for fman](https://github.com/raguay/ProjectManager) 
 and [Project Manager for Alfred](https://github.com/raguay/MyAlfred/blob/master/Alfred%204/Project%20Manager.alfredworkflow). 
+It will also use the editor defined by the $EDITOR environment variable or the editor defined 
+by the My Editor Alfred workflow or the CurrentFiles script used with [BitBar](http://getbitbar.org), 
+[TextBar](http://richsomerfield.com/apps/textbar/), and ScriptBar (my own version that isn't available yet).
 The goal is to have a nice, integrated way to work in and change projects.
 
 You can run your `npm`, `mask`, `maid`, `grunt`, and `gulp` scripts from this application. You don't have 
 to be in the root directory either. It will move the current shell to the root directory, 
 run the script, and then go back to the directory you were in. If you don't have some of these 
-it will not show them in the program.
+it will not show them in the program. It also runs git status and commit commands.
 
 ### Getting Current Directory
 
@@ -50,14 +53,15 @@ work on my system. Therefore, you will need to run `fig local ~/run/projectmanag
 ### Features
 
 - Go to predefined projects
-- Edit the project directory using $EDITOR
+- Edit the project directory
 - Edit maid, mask, npm, gulp, and grunt configuration files
 - Run tasks defined in maid, mask, npm, gulp, and grunt
 - Edit/Run the project startup script
-- Setup new project directories
+- Setup new project directories from the currently visited project in the shell
 - If the project has a git repository, the following is possible without having to be in the root directory of the project:
     - get a status
     - commit with a message
+- It will use the editor defined in the BitBar, TextBar, and Alfred CurrentFiles scripts. The editor is designated in the file `~/.myeditorchoice` and is ran with the `open` command. If the file doesn't exist, then it will run the editor defined by the $EDITOR environment variable.
 
 ### Ideals and Suggestions
 
@@ -65,7 +69,6 @@ If there is a feature you would like to see in the application or a bug, just cr
 repository with the subject `[feature]` or `[bug]` in the subject line. I'm still working on:
 
 - Mask subcommands and parameters
-- Better styling and dark mode
+- Better styling and dark mode (depending on what the author's of fig decide about styling the whole application)
 - Project templates
-- Use the editor defined in the BitBar, TextBar, and Alfred CurrentFiles scripts.
 
