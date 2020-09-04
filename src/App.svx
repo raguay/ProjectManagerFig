@@ -339,6 +339,7 @@
 
   function gitCommitPush() {
     fig.run("pushd .; cd '" + currentProjectDir + "'; git commit -am '" + gitmessage + "'; git push; popd;");
+    gitmessage = '';
   }
 </script>
 <div style="display: flex; flex-direction: column;">

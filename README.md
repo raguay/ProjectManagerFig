@@ -55,6 +55,9 @@ work on my system. Therefore, you will need to run `fig local ~/run/projectmanag
 - Run tasks defined in maid, mask, npm, gulp, and grunt
 - Edit/Run the project startup script
 - Setup new project directories
+- If the project has a git repository, the following is possible without having to be in the root directory of the project:
+    - get a status
+    - commit with a message
 
 ### Ideals and Suggestions
 
