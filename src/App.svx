@@ -18,12 +18,25 @@
   let gruntfile = false;
   let gulpfile = false;
   let tasks = null;
-  
+  let appData = {};
+
   function close() {
     fig.reposition("7");
   }
   
   onMount(() => {
+    //
+    // Get the project manager application information.
+    //
+    fig.appread('projectmanager.json',(data, err) => {
+      console.log(!err);
+      console.log(data);
+      if(!err) {
+        appData = JSON.parse(data);
+        expert = appData.expert;
+      }
+    });
+
     //
     // Get the list of projects.
     //
@@ -90,6 +103,7 @@
   }
 
   function initProjects() {
+
     if((currentProjectDir !== null)||(currentProjectDir !== '')) {
       //
       // Okay, a valid project is selected. Setup the internal variables.
@@ -298,11 +312,16 @@
   function runTask(tsk) {
     fig.run("pushd .; cd '" + currentProjectDir + "'; " + tsk.command + "; popd;");
   }
+
+  function toggleExpertSave() {
+    fig.appwrite('projectmanager.json', JSON.stringify({ expert: !expert}), (err) => {});
+    expert = !expert;
+  }
 </script>
 <div style="display: flex; flex-direction: column;">
 <div style="display: flex; flex-direction: row;">
 <label for='expert'>Expert</label>
-<input id='expert' name='expert' type='checkbox' value={expert} on:change={()=>{expert = !expert;}} style="margin: 3px 0px 0px 10px;" />
+<input id='expert' name='expert' type='checkbox' value={expert} on:change={toggleExpertSave} style="margin: 3px 0px 0px 10px;" />
 </div>
 
 {#if !showDialog}

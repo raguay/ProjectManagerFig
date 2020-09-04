@@ -4,7 +4,7 @@ fig.init = (stdin, options) => {
   //
   // Fig setup.
   //
-  fig.title = fig.env.PWD;
+  fig.title = "Project Manager";
   fig.icon = 'fig://${fig.env.PWD}'
 
   //
