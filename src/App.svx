@@ -17,8 +17,10 @@
   let maskfile = false;
   let gruntfile = false;
   let gulpfile = false;
+  let gitfile = false;
   let tasks = null;
   let appData = {};
+  let gitmessage = '';
 
   function close() {
     fig.reposition("7");
@@ -28,7 +30,7 @@
     //
     // Get the project manager application information.
     //
-    fig.appread('projectmanager.json',(data, err) => {
+    fig.fread('~/.fig/apps/projectmanager/projectmanager.json',(data, err) => {
       console.log(err);
       console.log(data);
       if(!err) {
@@ -191,6 +193,19 @@
           });
         });
       });
+
+      //
+      // See if it has a git repository and setup.
+      //
+      fig.fread(currentProjectDir + '/.git/HEAD',(data,err) => {
+        if(!err) {
+          //
+          // It's a git repository. Set up the functions for it.
+          //
+          gitfile = true;
+          gitmessage = '';
+        }
+      });
     }
   }
 
@@ -314,14 +329,22 @@
   }
 
   function toggleExpertSave() {
-    fig.appwrite('projectmanager.json', JSON.stringify({ expert: !expert}), (err) => {});
+    fig.fwrite('~/.fig/apps/projectmanager/projectmanager.json', JSON.stringify({ expert: !expert}), (err) => {});
     expert = !expert;
+  }
+
+  function gitStatus() {
+    fig.run("pushd .; cd '" + currentProjectDir + "'; git status; popd;");
+  }
+
+  function gitCommitPush() {
+    fig.run("pushd .; cd '" + currentProjectDir + "'; git commit -am '" + gitmessage + "'; popd;");
   }
 </script>
 <div style="display: flex; flex-direction: column;">
 <div style="display: flex; flex-direction: row;">
 <label for='expert'>Expert</label>
-<input id='expert' name='expert' type='checkbox' value={expert} on:change={toggleExpertSave} style="margin: 3px 0px 0px 10px;" />
+<input id='expert' name='expert' type='checkbox' checked={expert} on:change={toggleExpertSave} style="margin: 3px 0px 0px 10px;" />
 </div>
 
 {#if !showDialog}
@@ -443,6 +466,35 @@ This will run the current project's start script. This script is in the top of t
 This will open the project start script in the editor defined in the `$EDITOR` environment variable.
 
 </ButtonElement>
+
+{#if gitfile}
+
+<ButtonElement show={!expert} buttonFunction={gitStatus} buttonName="Git Status">
+
+#### Git Status
+
+Get the git status of the current project. You don't have to be in the root directory of the 
+project to run this command.
+
+</ButtonElement>
+
+<ButtonElement show={!expert} buttonFunction={gitCommitPush} buttonName="Git Commit and Push">
+
+#### Git Commit and Push
+
+This will take the message below and commit the changes to the git repository. Once committed, 
+it will push to GitHub. You don't have to be in the root directory of the project to run this command.
+
+<div slot="extra" style="width: 100%; display: flex; flex-direction: column;">
+
+#### Git Commit Message:
+
+  <input type="text" bind:value={gitmessage} />
+</div>
+
+</ButtonElement>
+
+{/if}
 
 <ButtonElement show={!expert} buttonFunction={close} buttonName="Close">
 
