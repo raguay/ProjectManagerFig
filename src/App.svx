@@ -1,1 +1,543 @@
-<script>  import { onMount } from 'svelte';  import ProjectSelector from './components/ProjectSelector.svelte';  import ButtonElement from './components/ButtonElement.svelte';    export let fig;  let currentProject = 'Not Set';  let currentProjectDir = 'Not Set';  let projects = [];  let showDialog = false;  let runCleanUp = null;  let expert = false;  let maidfile = false;  let npmfile = false;  let maskfile = false;  let gruntfile = false;  let gulpfile = false;  let gitfile = false;  let tasks = null;  let appData = {};  let gitmessage = '';  function close() {    fig.reposition("7");  }    onMount(() => {    //    // Get the project manager application information.    //    fig.fread('~/.fig/apps/projectmanager/projectmanager.json',(data, err) => {      console.log(err);      console.log(data);      if(!err) {        appData = JSON.parse(data);        expert = appData.expert;      }    });    //    // Get the list of projects.    //    fig.fread('~/.projects', (data, err) => {      if(err) {        console.log("Error:  " + err);        projects = '';        currentProject = '';      } else {        projects = data.split('\n');        var nodata = false;        projects.forEach((line, index, arr) => {          if(line !== '') {            arr[index] = line.split('|');          } else {            nodata = true;          }        });        //        // This gets rid of an empty line at the end of the file.        //        if(nodata) projects.pop();      }      //      // Now, get the current project directory and set the project.      //      fig.fread('~/.currentprojectdir', (data, err) => {        if(err) {          console.log("Error:  " + err);        } else {          setProjectByDirectory(data);        }      })    })  });  function setProjectByName(name) {    currentProject = null;    currentProjectDir = null;    projects.forEach((row) => {      if(row !== '') {        if(name.includes(row[0])) {          currentProjectDir = row[1];          currentProject = row[0];        }      }    });    initProjects();  }  function setProjectByDirectory(dir) {    currentProjectDir = null;    currentProject = null;    projects.forEach((row) => {      if(row !== '') {        if(isChildOf(dir,row[1])) {          currentProject = row[0];          currentProjectDir = row[1];        }      }    });    initProjects();  }  function runEditor(file) {    //    // Now, see if they have the My Editor workflow or the BitBar, TextBar, or ScriptBar    // equivalent.    //    fig.fread('~/.myeditorchoice', (data, err) => {      if(err) {        //        // They don't have the file. Use the environment editor.        //        fig.execute(fig.env.EDITOR + " " + file, (out, err) => {});      } else {        //        // They are using it. Use what it has instead. It's not a command line, so run         // it in the macOS way.        //        console.log(data.trim());        fig.execute("open -a '" + data.trim() + "' " + file, (out, err) => {});      }    });  }  function initProjects() {    //    // Make sure the project is setup right.    //    if((currentProjectDir !== null)||(currentProjectDir !== '')) {      //      // Okay, a valid project is selected. Setup the internal variables.      //      tasks = new Array();      fig.fread(currentProjectDir + '/maidfile.md',(data, err) => {        if(err) {          maidfile = false;        } else {          maidfile = true;          var commands = data.split('\n').filter(item => item.match(/^##\s*\w*/) !== null);          commands.forEach(item => {            const match = item.match(/^##\s*(\w*)/);            tasks.push({              name: "Maid " + match[1] + " script",              command: "maid " + match[1]            });            tasks = tasks;          });        }        fig.fread(currentProjectDir + '/maskfile.md',(data, err) => {          if(err) {            maskfile = false;          } else {            maskfile = true;            var commands = data.split('\n').filter(item => item.match(/^##\s*\w*/) !== null);            commands.forEach(item => {              const match = item.match(/^##\s*(\w*)/);              tasks.push({                name: "Mask " + match[1] + " script",                command: "mask " + match[1]              });              tasks = tasks;            });          }          fig.fread(currentProjectDir + '/package.json',(data, err) => {            if(err) {              npmfile = false;            } else {              npmfile = true;              var jpack = JSON.parse(data);              for(const item in jpack.scripts) {                tasks.push({                  name: "NPM " + item + " script",                  command: "npm run " + item                });                tasks = tasks;              }            }            fig.fread(currentProjectDir + '/Gruntfile.js',(data, err) => {              if(err) {                gruntfile = false;              } else {                gruntfile = true;                var commands = data.split('\n').filter(item => item.match(/grunt\.registerTask\(/) !== null);                commands.forEach(item => {                  const match = item.match(/grunt\.registerTask\(\'([^\']*)\'/);                  if(match === null) {                    match = item.match(/grunt\.registerTask\(\"([^\']*)\"/);                  }                  tasks.push({                    name: "Grunt " + match[1] + " script",                    command: "grunt " + match[1]                  });                  tasks = tasks;                });              }              fig.fread(currentProjectDir + '/gulpfile.js',(data, err) => {                if(err) {                  gulpfile = false;                } else {                  gulpfile = true;                  var commands = data.split('\n').filter(item => item.match(/^exports\.[^\=]+\=/) !== null);                  commands.forEach(item => {                    const match = item.match(/^exports\.([^(\ |\=)]*)/);                    tasks.push({                      name: "Gulp " + match[1] + " script",                      command: "gulp " + match[1]                    });                    tasks = tasks;                  });                }              });            });          });        });      });      //      // See if it has a git repository and setup.      //      fig.fread(currentProjectDir + '/.git/HEAD',(data,err) => {        if(!err) {          //          // It's a git repository. Set up the functions for it.          //          gitfile = true;          gitmessage = '';        }      });    }  }  function gotoProjDir() {    fig.run("cd '" + currentProjectDir + "'");    SaveCurrentProject();  }  function setCurrentDirectory() {    getCurrentDirectory(dir => {      setProjectByDirectory(dir);      if(currentProject === null) {        //        // It's a new Project directory. Get a name.        //        currentProject = 'New';        currentProjectDir = dir;        showDialog = true;        runCleanUp = FinishNewProject;      }      SaveCurrentProject();    });  }    function SaveCurrentProject() {    //    // Save the current project directory for other applications.    //    fig.fwrite('~/.currentprojectdir',currentProjectDir, (err) => {      if(err) console.log(err);    });  }  function FinishNewProject() {    //    // Save as a new project.    //    var narr = [];    narr[0] = currentProject;    narr[1] = currentProjectDir;    projects.push(narr);    saveProjects();    //    // Create the startup script as a blank executable file.    //    fig.execute('touch "' + currentProjectDir + '/.startproject"; chmod a+x "' + currentProjectDir + '/.startproject";', (out, err) => {});  }  function saveProjects() {    //    // Create the file in a string.    //    var saveString = projects.map((item) => {      return item[0] + '|' + item[1];    }).join('\n');    //    // Write to the file.    //    fig.fwrite('~/.projects',saveString,(err) => {      if(err) console.log(err);    });  }  function getCurrentDirectory(fun) {    var pth = fig.env.PWD;    fig.fread('~/.path', (data, err) => {      if (err) {        pth = fig.env.PWD;      } else {        pth = data.trim();      }      fun(pth);    });  }  function RunProjectScript() {    fig.run('pushd .; cd "' + currentProjectDir + '"; ./.startproject "' + currentProjectDir + '"; popd;');  }    function EditProjectScript() {    runEditor("'" + currentProjectDir + "/.startproject'");  }  function isChildOf(child, parent) {    child = new String(child);    parent = new String(parent);    if (child === parent) return true;    const parentTokens = parent.split('/').filter(i => i.length);    const childTokens = child.split('/').filter(i => i.length);    return parentTokens.every((t, i) => childTokens[i] === t);  }  function OpenProjectInEditor() {    runEditor('"' + currentProjectDir + '"');  }  function editMaskFile() {    runEditor('"' + currentProjectDir + '/maskfile.md"');  }    function editMaidFile() {    runEditor('"' + currentProjectDir + '/maidfile.md"');  }    function editNPMFile() {    runEditor('"' + currentProjectDir + '/package.json"');  }    function editGruntFile() {    runEditor('"' + currentProjectDir + '/Gruntfile.js"');  }   function editGulpFile() {    runEditor('"' + currentProjectDir + '/gulpfile.js"');  }  function runTask(tsk) {    fig.run("pushd .; cd '" + currentProjectDir + "'; " + tsk.command + "; popd;");  }  function toggleExpertSave() {    fig.fwrite('~/.fig/apps/projectmanager/projectmanager.json', JSON.stringify({ expert: !expert}), (err) => {});    expert = !expert;  }  function gitStatus() {    fig.run("pushd .; cd '" + currentProjectDir + "'; git status; popd;");  }  function gitCommitPush() {    fig.run("pushd .; cd '" + currentProjectDir + "'; git commit -am '" + gitmessage + "'; git push; popd;");    gitmessage = '';  }</script><div style="display: flex; flex-direction: column;"><div style="display: flex; flex-direction: row;"><label for='expert'>Expert</label><input id='expert' name='expert' type='checkbox' checked={expert} on:change={toggleExpertSave} style="margin: 3px 0px 0px 10px;" /></div>{#if !showDialog}{#if !expert}Welcome to the Project Manager for Fig. Here, you can go to your projects, run scripts, and much more.The `Expert` checkbox above will hide these information areas and just show the actions you can perform.{/if}### Current Project: <ProjectSelector project={currentProject} projects={projects} on:projectChange={(e) => { setProjectByName(e.detail); }} /> <ButtonElement show={!expert} buttonFunction={gotoProjDir} buttonName="Go to Project">#### Goto Project DirectoryThis will take the current terminal session to the project directory in the dropdown.</ButtonElement>{#if !expert}#### ScriptsThe following buttons will launch scripts that are in `npm`, `maid`, or `mask`. You don't have to be in the root directory of the project to run them. Project Manager will save your current directory, run the script, and return to your directory.{/if}{#if tasks !== null}  {#each tasks as task}    <button on:click={() => { runTask(task); }}>{task.name}</button>  {/each}{/if}<ButtonElement show={!expert} buttonFunction={OpenProjectInEditor} buttonName="Edit Project">#### Edit the ProjectThis will open the project in the editor defined in the `$EDITOR` environment variable.</ButtonElement>{#if maidfile}<ButtonElement show={!expert} buttonFunction={editMaidFile} buttonName="Edit Maid File">#### Edit the Maid FileMaid is a task runner written in JavaScript for defining actions using a markdown file.</ButtonElement>{/if}{#if gulpfile}<ButtonElement show={!expert} buttonFunction={editGulpFile} buttonName="Edit Gulp File">#### Edit the Gulp FileGulp is a task runner written in JavaScript for defining actions using a javascript file.</ButtonElement>{/if}{#if gruntfile}<ButtonElement show={!expert} buttonFunction={editGruntFile} buttonName="Edit Grunt File">#### Edit the Grunt FileGrunt is a task runner written in JavaScript for defining actions using a javascript file.</ButtonElement>{/if}{#if maskfile}<ButtonElement show={!expert} buttonFunction={editMaskFile} buttonName="Edit Mask File">#### Edit the Mask FileMask is a task runner written in Rust for defining actions using a markdown file.</ButtonElement>{/if}{#if npmfile}<ButtonElement show={!expert} buttonFunction={editNPMFile} buttonName="Edit Npm File">#### Edit the npm FileThis will edit the `package.json` file for the npm project.</ButtonElement>{/if}<ButtonElement show={!expert} buttonFunction={setCurrentDirectory} buttonName="Set Current Directory as Project">#### Set as Current Project or Create New Project DirectoryThis will get the current directory and set it as the current project. If the current directory is a subdirectory in a currently defined project, it will set that project as the active project. Otherwise, it will ask for a new project name, create a blank project start script, and save the current directory with that project name. </ButtonElement><ButtonElement show={!expert} buttonFunction={RunProjectScript} buttonName="Run Project Script">#### Run the Project ScriptThis will run the current project's start script. This script is in the top of the project directory and is named `.startproject`.</ButtonElement><ButtonElement show={!expert} buttonFunction={EditProjectScript} buttonName="Edit Project Script">#### Edit the Project ScriptThis will open the project start script in the editor defined in the `$EDITOR` environment variable.</ButtonElement>{#if gitfile}<ButtonElement show={!expert} buttonFunction={gitStatus} buttonName="Git Status">#### Git StatusGet the git status of the current project. You don't have to be in the root directory of the project to run this command.</ButtonElement><ButtonElement show={!expert} buttonFunction={gitCommitPush} buttonName="Git Commit and Push">#### Git Commit and PushThis will take the message below and commit the changes to the git repository. Once committed, it will push to GitHub. You don't have to be in the root directory of the project to run this command.<div slot="extra" style="width: 100%; display: flex; flex-direction: column;">#### Git Commit Message:  <input type="text" bind:value={gitmessage} /></div></ButtonElement>{/if}<ButtonElement show={!expert} buttonFunction={close} buttonName="Close">#### Leave the Project ManagerLeave the Project Manager application for Fig.</ButtonElement>{:else}### Give a name for the Project: <input type="text" bind:value={currentProject} /><button on:click={() => {showDialog = false; runCleanUp(); }}>Return</button>{/if}</div>
+<script>
+  import { onMount } from 'svelte';
+
+  import ProjectSelector from './components/ProjectSelector.svelte';
+  import ButtonElement from './components/ButtonElement.svelte';
+  
+  export let fig;
+
+  let currentProject = 'Not Set';
+  let currentProjectDir = 'Not Set';
+  let projects = [];
+  let showDialog = false;
+  let runCleanUp = null;
+  let expert = false;
+  let maidfile = false;
+  let npmfile = false;
+  let maskfile = false;
+  let gruntfile = false;
+  let gulpfile = false;
+  let gitfile = false;
+  let tasks = null;
+  let appData = {};
+  let gitmessage = '';
+
+  function close() {
+    fig.reposition("7");
+  }
+  
+  onMount(() => {
+    //
+    // Get the project manager application information.
+    //
+    fig.fread('~/.fig/apps/projectmanager/projectmanager.json',(data, err) => {
+      console.log(err);
+      console.log(data);
+      if(!err) {
+        appData = JSON.parse(data);
+        expert = appData.expert;
+      }
+    });
+
+    //
+    // Get the list of projects.
+    //
+    fig.fread('~/.projects', (data, err) => {
+      if(err) {
+        console.log("Error:  " + err);
+        projects = '';
+        currentProject = '';
+      } else {
+        projects = data.split('\n');
+        var nodata = false;
+        projects.forEach((line, index, arr) => {
+          if(line !== '') {
+            arr[index] = line.split('|');
+          } else {
+            nodata = true;
+          }
+        });
+        //
+        // This gets rid of an empty line at the end of the file.
+        //
+        if(nodata) projects.pop();
+      }
+
+      //
+      // Now, get the current project directory and set the project.
+      //
+      fig.fread('~/.currentprojectdir', (data, err) => {
+        if(err) {
+          console.log("Error:  " + err);
+        } else {
+          setProjectByDirectory(data);
+        }
+      })
+    })
+  });
+
+  function setProjectByName(name) {
+    currentProject = null;
+    currentProjectDir = null;
+    projects.forEach((row) => {
+      if(row !== '') {
+        if(name.includes(row[0])) {
+          currentProjectDir = row[1];
+          currentProject = row[0];
+        }
+      }
+    });
+    initProjects();
+  }
+
+  function setProjectByDirectory(dir) {
+    currentProjectDir = null;
+    currentProject = null;
+    projects.forEach((row) => {
+      if(row !== '') {
+        if(isChildOf(dir,row[1])) {
+          currentProject = row[0];
+          currentProjectDir = row[1];
+        }
+      }
+    });
+    initProjects();
+  }
+
+  function runEditor(file) {
+    //
+    // Now, see if they have the My Editor workflow or the BitBar, TextBar, or ScriptBar
+    // equivalent.
+    //
+    fig.fread('~/.myeditorchoice', (data, err) => {
+      if(err) {
+        //
+        // They don't have the file. Use the environment editor.
+        //
+        fig.execute(fig.env.EDITOR + " " + file, (out, err) => {});
+      } else {
+        //
+        // They are using it. Use what it has instead. It's not a command line, so run 
+        // it in the macOS way.
+        //
+        data = data.trim();
+        if(data[0] === '/') {
+          fig.execute("open -a '" + data.trim() + "' " + file, (out, err) => {});
+        } else {
+          fig.execute(data + " " + file, (out, err) => {});
+        }
+      }
+    });
+  }
+
+  function initProjects() {
+    //
+    // Make sure the project is setup right.
+    //
+    if((currentProjectDir !== null)||(currentProjectDir !== '')) {
+      //
+      // Okay, a valid project is selected. Setup the internal variables.
+      //
+      tasks = new Array();
+      fig.fread(currentProjectDir + '/maidfile.md',(data, err) => {
+        if(err) {
+          maidfile = false;
+        } else {
+          maidfile = true;
+          var commands = data.split('\n').filter(item => item.match(/^##\s*\w*/) !== null);
+          commands.forEach(item => {
+            const match = item.match(/^##\s*(\w*)/);
+            tasks.push({
+              name: "Maid " + match[1] + " script",
+              command: "maid " + match[1]
+            });
+            tasks = tasks;
+          });
+        }
+        fig.fread(currentProjectDir + '/maskfile.md',(data, err) => {
+          if(err) {
+            maskfile = false;
+          } else {
+            maskfile = true;
+            var commands = data.split('\n').filter(item => item.match(/^##\s*\w*/) !== null);
+            commands.forEach(item => {
+              const match = item.match(/^##\s*(\w*)/);
+              tasks.push({
+                name: "Mask " + match[1] + " script",
+                command: "mask " + match[1]
+              });
+              tasks = tasks;
+            });
+          }
+          fig.fread(currentProjectDir + '/package.json',(data, err) => {
+            if(err) {
+              npmfile = false;
+            } else {
+              npmfile = true;
+              var jpack = JSON.parse(data);
+              for(const item in jpack.scripts) {
+                tasks.push({
+                  name: "NPM " + item + " script",
+                  command: "npm run " + item
+                });
+                tasks = tasks;
+              }
+            }
+            fig.fread(currentProjectDir + '/Gruntfile.js',(data, err) => {
+              if(err) {
+                gruntfile = false;
+              } else {
+                gruntfile = true;
+                var commands = data.split('\n').filter(item => item.match(/grunt\.registerTask\(/) !== null);
+                commands.forEach(item => {
+                  const match = item.match(/grunt\.registerTask\(\'([^\']*)\'/);
+                  if(match === null) {
+                    match = item.match(/grunt\.registerTask\(\"([^\']*)\"/);
+                  }
+                  tasks.push({
+                    name: "Grunt " + match[1] + " script",
+                    command: "grunt " + match[1]
+                  });
+                  tasks = tasks;
+                });
+              }
+              fig.fread(currentProjectDir + '/gulpfile.js',(data, err) => {
+                if(err) {
+                  gulpfile = false;
+                } else {
+                  gulpfile = true;
+                  var commands = data.split('\n').filter(item => item.match(/^exports\.[^\=]+\=/) !== null);
+                  commands.forEach(item => {
+                    const match = item.match(/^exports\.([^(\ |\=)]*)/);
+                    tasks.push({
+                      name: "Gulp " + match[1] + " script",
+                      command: "gulp " + match[1]
+                    });
+                    tasks = tasks;
+                  });
+                }
+              });
+            });
+          });
+        });
+      });
+
+      //
+      // See if it has a git repository and setup.
+      //
+      fig.fread(currentProjectDir + '/.git/HEAD',(data,err) => {
+        if(!err) {
+          //
+          // It's a git repository. Set up the functions for it.
+          //
+          gitfile = true;
+          gitmessage = '';
+        }
+      });
+    }
+  }
+
+  function gotoProjDir() {
+    fig.run("cd '" + currentProjectDir + "'");
+    SaveCurrentProject();
+  }
+
+  function setCurrentDirectory() {
+    getCurrentDirectory(dir => {
+      setProjectByDirectory(dir);
+      if(currentProject === null) {
+        //
+        // It's a new Project directory. Get a name.
+        //
+        currentProject = 'New';
+        currentProjectDir = dir;
+        showDialog = true;
+        runCleanUp = FinishNewProject;
+      }
+      SaveCurrentProject();
+    });
+  }
+  
+  function SaveCurrentProject() {
+    //
+    // Save the current project directory for other applications.
+    //
+    fig.fwrite('~/.currentprojectdir',currentProjectDir, (err) => {
+      if(err) console.log(err);
+    });
+  }
+
+  function FinishNewProject() {
+    //
+    // Save as a new project.
+    //
+    var narr = [];
+    narr[0] = currentProject;
+    narr[1] = currentProjectDir;
+    projects.push(narr);
+    saveProjects();
+
+    //
+    // Create the startup script as a blank executable file.
+    //
+    fig.execute('touch "' + currentProjectDir + '/.startproject"; chmod a+x "' + currentProjectDir + '/.startproject";', (out, err) => {});
+  }
+
+  function saveProjects() {
+    //
+    // Create the file in a string.
+    //
+    var saveString = projects.map((item) => {
+      return item[0] + '|' + item[1];
+    }).join('\n');
+
+    //
+    // Write to the file.
+    //
+    fig.fwrite('~/.projects',saveString,(err) => {
+      if(err) console.log(err);
+    });
+  }
+
+  function getCurrentDirectory(fun) {
+    var pth = fig.env.PWD;
+    fig.fread('~/.path', (data, err) => {
+      if (err) {
+        pth = fig.env.PWD;
+      } else {
+        pth = data.trim();
+      }
+      fun(pth);
+    });
+  }
+
+  function RunProjectScript() {
+    fig.run('pushd .; cd "' + currentProjectDir + '"; ./.startproject "' + currentProjectDir + '"; popd;');
+  }
+  
+  function EditProjectScript() {
+    runEditor("'" + currentProjectDir + "/.startproject'");
+  }
+
+  function isChildOf(child, parent) {
+    child = new String(child);
+    parent = new String(parent);
+    if (child === parent) return true;
+    const parentTokens = parent.split('/').filter(i => i.length);
+    const childTokens = child.split('/').filter(i => i.length);
+    return parentTokens.every((t, i) => childTokens[i] === t);
+  }
+
+  function OpenProjectInEditor() {
+    runEditor('"' + currentProjectDir + '"');
+  }
+
+  function editMaskFile() {
+    runEditor('"' + currentProjectDir + '/maskfile.md"');
+  }
+  
+  function editMaidFile() {
+    runEditor('"' + currentProjectDir + '/maidfile.md"');
+  }
+  
+  function editNPMFile() {
+    runEditor('"' + currentProjectDir + '/package.json"');
+  }
+  
+  function editGruntFile() {
+    runEditor('"' + currentProjectDir + '/Gruntfile.js"');
+  }
+ 
+  function editGulpFile() {
+    runEditor('"' + currentProjectDir + '/gulpfile.js"');
+  }
+
+  function runTask(tsk) {
+    fig.run("pushd .; cd '" + currentProjectDir + "'; " + tsk.command + "; popd;");
+  }
+
+  function toggleExpertSave() {
+    fig.fwrite('~/.fig/apps/projectmanager/projectmanager.json', JSON.stringify({ expert: !expert}), (err) => {});
+    expert = !expert;
+  }
+
+  function gitStatus() {
+    fig.run("pushd .; cd '" + currentProjectDir + "'; git status; popd;");
+  }
+
+  function gitCommitPush() {
+    fig.run("pushd .; cd '" + currentProjectDir + "'; git commit -am '" + gitmessage + "'; git push; popd;");
+    gitmessage = '';
+  }
+</script>
+<div style="display: flex; flex-direction: column;">
+<div style="display: flex; flex-direction: row;">
+<label for='expert'>Expert</label>
+<input id='expert' name='expert' type='checkbox' checked={expert} on:change={toggleExpertSave} style="margin: 3px 0px 0px 10px;" />
+</div>
+
+{#if !showDialog}
+
+{#if !expert}
+Welcome to the Project Manager for Fig. Here, you can go to your projects, run scripts, and much more.
+
+The `Expert` checkbox above will hide these information areas and just show the actions you can perform.
+
+{/if}
+
+### Current Project: <ProjectSelector project={currentProject} projects={projects} on:projectChange={(e) => { setProjectByName(e.detail); }} /> 
+
+<ButtonElement show={!expert} buttonFunction={gotoProjDir} buttonName="Go to Project">
+
+#### Goto Project Directory
+
+This will take the current terminal session to the project directory in the dropdown.
+
+</ButtonElement>
+
+{#if !expert}
+
+#### Scripts
+
+The following buttons will launch scripts that are in `npm`, `maid`, or `mask`. You don't have to be in the 
+root directory of the project to run them. Project Manager will save your current directory, run the 
+script, and return to your directory.
+
+{/if}
+
+{#if tasks !== null}
+  {#each tasks as task}
+    <button on:click={() => { runTask(task); }}>{task.name}</button>
+  {/each}
+{/if}
+
+<ButtonElement show={!expert} buttonFunction={OpenProjectInEditor} buttonName="Edit Project">
+
+#### Edit the Project
+
+This will open the project in the editor defined in the `$EDITOR` environment variable.
+
+</ButtonElement>
+
+{#if maidfile}
+<ButtonElement show={!expert} buttonFunction={editMaidFile} buttonName="Edit Maid File">
+
+#### Edit the Maid File
+
+Maid is a task runner written in JavaScript for defining actions using a markdown file.
+
+</ButtonElement>
+{/if}
+
+{#if gulpfile}
+<ButtonElement show={!expert} buttonFunction={editGulpFile} buttonName="Edit Gulp File">
+
+#### Edit the Gulp File
+
+Gulp is a task runner written in JavaScript for defining actions using a javascript file.
+
+</ButtonElement>
+{/if}
+
+{#if gruntfile}
+<ButtonElement show={!expert} buttonFunction={editGruntFile} buttonName="Edit Grunt File">
+
+#### Edit the Grunt File
+
+Grunt is a task runner written in JavaScript for defining actions using a javascript file.
+
+</ButtonElement>
+{/if}
+
+{#if maskfile}
+<ButtonElement show={!expert} buttonFunction={editMaskFile} buttonName="Edit Mask File">
+
+#### Edit the Mask File
+
+Mask is a task runner written in Rust for defining actions using a markdown file.
+
+</ButtonElement>
+{/if}
+
+{#if npmfile}
+<ButtonElement show={!expert} buttonFunction={editNPMFile} buttonName="Edit Npm File">
+
+#### Edit the npm File
+
+This will edit the `package.json` file for the npm project.
+
+</ButtonElement>
+{/if}
+
+<ButtonElement show={!expert} buttonFunction={setCurrentDirectory} buttonName="Set Current Directory as Project">
+
+#### Set as Current Project or Create New Project Directory
+
+This will get the current directory and set it as the current project. If the current directory 
+is a subdirectory in a currently defined project, it will set that project as the active project. 
+
+Otherwise, it will ask for a new project name, create a blank project start script, and save the current directory with that project name. 
+
+</ButtonElement>
+
+<ButtonElement show={!expert} buttonFunction={RunProjectScript} buttonName="Run Project Script">
+
+#### Run the Project Script
+
+This will run the current project's start script. This script is in the top of the project directory and is named `.startproject`.
+
+</ButtonElement>
+
+<ButtonElement show={!expert} buttonFunction={EditProjectScript} buttonName="Edit Project Script">
+
+#### Edit the Project Script
+
+This will open the project start script in the editor defined in the `$EDITOR` environment variable.
+
+</ButtonElement>
+
+{#if gitfile}
+
+<ButtonElement show={!expert} buttonFunction={gitStatus} buttonName="Git Status">
+
+#### Git Status
+
+Get the git status of the current project. You don't have to be in the root directory of the 
+project to run this command.
+
+</ButtonElement>
+
+<ButtonElement show={!expert} buttonFunction={gitCommitPush} buttonName="Git Commit and Push">
+
+#### Git Commit and Push
+
+This will take the message below and commit the changes to the git repository. Once committed, 
+it will push to GitHub. You don't have to be in the root directory of the project to run this command.
+
+<div slot="extra" style="width: 100%; display: flex; flex-direction: column;">
+
+#### Git Commit Message:
+
+  <input type="text" bind:value={gitmessage} />
+</div>
+
+</ButtonElement>
+
+{/if}
+
+<ButtonElement show={!expert} buttonFunction={close} buttonName="Close">
+
+#### Leave the Project Manager
+
+Leave the Project Manager application for Fig.
+
+</ButtonElement>
+
+{:else}
+
+### Give a name for the Project: 
+<input type="text" bind:value={currentProject} />
+<button on:click={() => {showDialog = false; runCleanUp(); }}>Return</button>
+{/if}
+
+</div>

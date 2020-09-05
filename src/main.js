@@ -5,7 +5,7 @@ fig.init = (stdin, options) => {
   // Fig setup.
   //
   fig.title = "Project Manager";
-  fig.icon = 'fig://${fig.env.PWD}'
+  fig.icon = `fig://${fig.env.PWD}`
 
   //
   // Calling the application.
