@@ -62,6 +62,8 @@ work on my system. Therefore, you will need to run `fig local ~/run/projectmanag
     - get a status
     - commit with a message
 - It will use the editor defined in the BitBar, TextBar, and Alfred CurrentFiles scripts. The editor is designated in the file `~/.myeditorchoice` and is ran with the `open` command. If the file doesn't exist, then it will run the editor defined by the $EDITOR environment variable.
+- Project templates: either local or on GitHub with a initializer script that will be ran after 
+copying.
 
 ### Ideals and Suggestions
 
@@ -70,5 +72,4 @@ repository with the subject `[feature]` or `[bug]` in the subject line. I'm stil
 
 - Mask subcommands and parameters
 - Better styling and dark mode (depending on what the author's of fig decide about styling the whole application)
-- Project templates
 

@@ -19,9 +19,16 @@
   let gulpfile = false;
   let gitfile = false;
   let tasks = null;
-  let appData = {};
   let gitmessage = '';
-
+  let templates = [];
+  let templateDirUrl = '';
+  let local = true;
+  let runScript = 'setupTemplate';
+  let templateName = '';
+  let showNewTemplate = false;
+  let useTemplate = 'none';
+  let showEditTemplate = false;
+  
   function close() {
     fig.reposition("7");
   }
@@ -31,11 +38,20 @@
     // Get the project manager application information.
     //
     fig.fread('~/.fig/apps/projectmanager/projectmanager.json',(data, err) => {
-      console.log(err);
-      console.log(data);
-      if(!err) {
-        appData = JSON.parse(data);
-        expert = appData.expert;
+      if(err) {
+        //
+        // Files doesn't exist. Set the defaults and save the file.
+        //
+        expert = false;
+        templates = [];
+        saveAppData();
+      } else {
+        //
+        // Parse the information.
+        //
+        var appData = JSON.parse(data);
+        if(typeof appData.expert !== 'undefined') expert = appData.expert;
+        if(typeof appData.templates !== 'undefined') templates = appData.templates;
       }
     });
 
@@ -281,6 +297,48 @@
     // Create the startup script as a blank executable file.
     //
     fig.execute('touch "' + currentProjectDir + '/.startproject"; chmod a+x "' + currentProjectDir + '/.startproject";', (out, err) => {});
+
+    //
+    // If using template, then copy it into place.
+    //
+    if(!useTemplate.includes('none')) {
+      var template = templates.find(item => item.name.includes(useTemplate));
+      if(template.local) {
+        //
+        // It's a local directoy. Copy away.
+        //
+        fig.run('echo "Copy template' + useTemplate + '..."; cp -R "' + template.templateDirUrl + '/." .; ' + template.runScript + ';');
+        fig.fread(template.templateDirUrl + "/setupTemplate",(data,err) => {
+          //
+          // The setup script for the template is there. remove it.
+          //
+          if(!err) fig.run("rm setupTemplate;");
+        });
+      } else {
+        //
+        // It's a repository on GitHub.
+        //
+        fig.run('echo "Copy GitHub template ' + useTemplate + '..."; npx degit --force ' + template.templateDirUrl + ' "' + currentProjectDir + '"; ' + template.runScript + ';');
+      }
+    }
+  }
+
+  function removeTemplate() {
+    templates = templates.filter(item => !item.name.includes(useTemplate));
+    useTemplate = 'none';
+    templateName = '';
+    templateDirUrl = '';
+    runScript = 'setupTemplate';
+    local = true;
+    saveAppData();
+  }
+
+  function newBlankTemplate() {
+    useTemplate = 'none';
+    templateName = 'New Template';
+    templateDirUrl = '';
+    runScript = 'setupTemplate';
+    local = true;
   }
 
   function saveProjects() {
@@ -357,8 +415,13 @@
   }
 
   function toggleExpertSave() {
-    fig.fwrite('~/.fig/apps/projectmanager/projectmanager.json', JSON.stringify({ expert: !expert}), (err) => {});
     expert = !expert;
+    saveAppData();
+  }
+
+  function saveAppData() {
+    fig.fwrite('~/.fig/apps/projectmanager/projectmanager.json', 
+               JSON.stringify({ expert: expert, templates: templates}), (err) => {});
   }
 
   function gitStatus() {
@@ -369,6 +432,87 @@
     fig.run("pushd .; cd '" + currentProjectDir + "'; git commit -am '" + gitmessage + "'; git push; popd;");
     gitmessage = '';
   }
+
+  function addTemplate() {
+    //
+    // The templates structure is:
+    //
+    //  templates = {
+    //    templateName,
+    //    templateDirUrl,
+    //    local,
+    //    runScript
+    //  }
+    //
+    // where templateDirUrl is the path to a local directory or a URL of a GitHub account 
+    // to copy for the template, local is true if the template is local or false if it is 
+    // on the web, and runScript contains the commands to run in the freshly copied directory 
+    // to initialize the project or do what ever is needed to get the template ready for use.
+    //
+    if((typeof templateDirUrl !== 'undefined') &&
+       (typeof templateDirUrl === 'string') &&
+       (templateDirUrl !== '') &&
+       (typeof local === 'boolean') &&
+       (typeof runScript === 'string')) {
+      templates.push({
+        name: templateName,
+        templateDirUrl: templateDirUrl,
+        local: local,
+        runScript: runScript
+      });
+      saveAppData();
+    }
+  }
+
+  function setDirAsTemplate() {
+    if(showNewTemplate) {
+      //
+      // Inside of the create template dialog. Create it.
+      //
+      addTemplate();
+    } else {
+      //
+      // Turn on the template dialog so the user can fill it in.
+      //
+      getCurrentDirectory((dir) => {
+        var dirName = dir.split('\/');
+        templateName = dirName[dirName.length-1];
+        templateDirUrl = dir;
+        local = true;
+        showNewTemplate = true;
+      });
+    }
+  }
+
+  function editTemplates() {
+    showEditTemplate = true;
+    useTemplate = 'none';
+    templateName = '';
+    templateDirUrl = '';
+    runScript = 'setupTemplate';
+    local = true;
+  }
+
+  function setTemplateToEdit() {
+    var template = templates.find(item => item.name.includes(useTemplate));
+    templateName = template.name;
+    templateDirUrl = template.templateDirUrl;
+    local = template.local;
+    runScript = template.runScript;
+  }
+
+  function saveTemplate() {
+    templates = templates.map(item => {
+      if(item.name.includes(useTemplate)) {
+        item.name = templateName;
+        item.templateDirUrl = templateDirUrl;
+        item.local = local;
+        item.runScript = runScript;
+      }
+      return item;
+    });
+    saveAppData();
+  }
 </script>
 <div style="display: flex; flex-direction: column;">
 <div style="display: flex; flex-direction: row;">
@@ -376,7 +520,7 @@
 <input id='expert' name='expert' type='checkbox' checked={expert} on:change={toggleExpertSave} style="margin: 3px 0px 0px 10px;" />
 </div>
 
-{#if !showDialog}
+{#if !showDialog && !showNewTemplate && !showEditTemplate}
 
 {#if !expert}
 Welcome to the Project Manager for Fig. Here, you can go to your projects, run scripts, and much more.
@@ -399,9 +543,9 @@ This will take the current terminal session to the project directory in the drop
 
 #### Scripts
 
-The following buttons will launch scripts that are in `npm`, `maid`, or `mask`. You don't have to be in the 
+The following buttons will launch scripts that are in `npm`, `gulp`, `grunt`, `maid`, or `mask` files. You don't have to be in the 
 root directory of the project to run them. Project Manager will save your current directory, run the 
-script, and return to your directory.
+script in the root directory of the project, and return to your directory.
 
 {/if}
 
@@ -415,7 +559,9 @@ script, and return to your directory.
 
 #### Edit the Project
 
-This will open the project in the editor defined in the `$EDITOR` environment variable.
+This will open the project in the editor defined in the `$EDITOR` environment variable or the 
+editor listed in the `~/.myeditorchoice` file, which is used by the My Editor workflow for Alfred or the CurrentFiles script used with [BitBar](http://getbitbar.org), 
+[TextBar](http://richsomerfield.com/apps/textbar/), and ScriptBar (my own version that isn't available yet).
 
 </ButtonElement>
 
@@ -478,6 +624,19 @@ is a subdirectory in a currently defined project, it will set that project as th
 
 Otherwise, it will ask for a new project name, create a blank project start script, and save the current directory with that project name. 
 
+You can also set a template to be used to create this project. If a local template have the script `setupTemplate` in the template directory, it will be removed 
+after the script in the variable `Script` is ran. The script variable is automatically set to 
+`setupTemplate` for convience when creating templates.
+
+</ButtonElement>
+
+<ButtonElement show={!expert} buttonFunction={setDirAsTemplate} buttonName="Set Current Directory as Templage">
+
+#### Set the Current Directory as a Template
+
+This will set the current directory as a template. It will show the template maker dialog
+for adding the different fields that make up a template specification. 
+
 </ButtonElement>
 
 <ButtonElement show={!expert} buttonFunction={RunProjectScript} buttonName="Run Project Script">
@@ -492,7 +651,9 @@ This will run the current project's start script. This script is in the top of t
 
 #### Edit the Project Script
 
-This will open the project start script in the editor defined in the `$EDITOR` environment variable.
+This will open the project start script in the editor defined in the `$EDITOR` environment variable or the 
+editor listed in the `~/.myeditorchoice` file, which is used by the My Editor workflow for Alfred or the CurrentFiles script used with [BitBar](http://getbitbar.org), 
+[TextBar](http://richsomerfield.com/apps/textbar/), and ScriptBar (my own version that isn't available yet).
 
 </ButtonElement>
 
@@ -525,6 +686,15 @@ it will push to GitHub. You don't have to be in the root directory of the projec
 
 {/if}
 
+<ButtonElement show={!expert} buttonFunction={editTemplates} buttonName="Edit Templates">
+
+#### Edit Template
+
+This button will show the edit template dialog for edit the different templates, remove a 
+template, or create a new blank template.
+
+</ButtonElement>
+
 <ButtonElement show={!expert} buttonFunction={close} buttonName="Close">
 
 #### Leave the Project Manager
@@ -532,11 +702,118 @@ it will push to GitHub. You don't have to be in the root directory of the projec
 Leave the Project Manager application for Fig.
 
 </ButtonElement>
+{:else if showEditTemplate}
+
+### Edit Template
+
+{#if !expert}
+
+Here you can edit the different templates, remove a template, or create a new blank template. 
+Each template has the following data structure:
+
+| Field | Description |
+| --- | ------ |
+| Name | Your name for the template. It will use the templates directory name for starters. |
+| Path | The path, whether a local directory or a GitHub url, to use as a template.|
+| Local | If checked, is a local directory. Otherwise, it is a GitHub url. |
+| Script | The script to run in the new directory after the template is copied. |
+
+{/if}
+
+#### Select Template:
+
+<select bind:value={useTemplate} on:change={setTemplateToEdit} >
+  <option value='none'>None</option>
+  {#each templates as template}
+    <option value={template.name}>{template.name}</option>
+  {/each}
+</select>
+
+#### Template Items:
+
+<div style="display: flex; flex-direction: row;">
+<label style="margin: 7px 10px 0px 0px;">Name:</label>
+<input type="text" bind:value={templateName} />
+</div>
+<div style="display: flex; flex-direction: row;">
+<label style="margin: 7px 10px 0px 0px;">Path:</label>
+<input type="text" bind:value={templateDirUrl} />
+</div>
+<div style="display: flex; flex-direction: row;">
+<label style="margin: 0px 10px 0px 0px;">Local:</label>
+<input style="margin: 2px 0px 0px 0px;" type="checkbox" bind:checked={local} />
+</div>
+<div style="display: flex; flex-direction: row;">
+<label style="margin: 8px 10px 0px 0px;">Script:</label>
+<input type="text" bind:value={runScript} />
+</div>
+
+<div style="display: flex; flex-direction: row;">
+<button style="margin: 5px; padding: 3px;" on:click={() => { showEditTemplate = false;}} >Return</button>
+<button style="margin: 5px; padding: 3px;" on:click={removeTemplate}>Delete</button>
+<button style="margin: 5px; padding: 3px;" on:click={newBlankTemplate}>New</button>
+<button style="margin: 5px; padding: 3px;" on:click={saveTemplate} >Save Edit</button>
+</div>
+
+{:else if showNewTemplate}
+
+### Setup Current Directory as a Template
+
+{#if !expert}
+
+This will create a new template item in the structure for templates. The user 
+can then use the information to create a new project from the template. It is a 
+fairly flexable system in which you can designate a script or command line to 
+execute after the template is copied.
+
+| Field | Description |
+| --- | ------ |
+| Name | Your name for the template. It will use the templates directory name for starters. |
+| Path | The path, whether a local directory or a GitHub url, to use as a template.|
+| Local | If checked, is a local directory. Otherwise, it is a GitHub url. |
+| Script | The script to run in the new directory after the template is copied. |
+
+{/if}
+
+<div style="display: flex; flex-direction: row;">
+<label style="margin: 7px 10px 0px 0px;">Name:</label>
+<input type="text" bind:value={templateName} />
+</div>
+<div style="display: flex; flex-direction: row;">
+<label style="margin: 7px 10px 0px 0px;">Path:</label>
+<input type="text" bind:value={templateDirUrl} />
+</div>
+<div style="display: flex; flex-direction: row;">
+<label style="margin: 0px 10px 0px 0px;">Local:</label>
+<input style="margin: 2px 0px 0px 0px;" type="checkbox" bind:checked={local} />
+</div>
+<div style="display: flex; flex-direction: row;">
+<label style="margin: 8px 10px 0px 0px;">Script:</label>
+<input type="text" bind:value={runScript} />
+</div>
+
+<div style="display: flex; flex-direction: row;">
+<button style="margin: 5px; padding: 3px;" on:click={() => { showNewTemplate = false;}} >Cancel</button>
+<button style="margin: 5px; padding: 3px;" on:click={setDirAsTemplate} >Set Directory</button>
+</div>
 
 {:else}
 
 ### Give a name for the Project: 
+
 <input type="text" bind:value={currentProject} />
+
+### Use Template
+
+If you want to install a template, change from 'none' to the template you want to use.
+
+<select bind:value={useTemplate} >
+  <option value='none'>None</option>
+  {#each templates as template}
+    <option value={template.name}>{template.name}</option>
+  {/each}
+</select>
+
 <button on:click={() => {showDialog = false; runCleanUp(); }}>Return</button>
 {/if}
 
