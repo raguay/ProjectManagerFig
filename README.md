@@ -64,6 +64,7 @@ work on my system. Therefore, you will need to run `fig local ~/run/projectmanag
 - It will use the editor defined in the BitBar, TextBar, and Alfred CurrentFiles scripts. The editor is designated in the file `~/.myeditorchoice` and is ran with the `open` command. If the file doesn't exist, then it will run the editor defined by the $EDITOR environment variable.
 - Project templates: either local or on GitHub with a initializer script that will be ran after 
 copying.
+- Project Notes: a special directory `.notes` will contain notes you create for this project. It works with the [fman](https://fman.io/) [Notes plugin](https://github.com/raguay/Notes). You can edit, delete, and create new notes.
 
 ### Ideals and Suggestions
 
