@@ -1,8 +1,14 @@
 {
   "version": 3,
   "file": "bundle.css",
-  "sources": [],
-  "sourcesContent": [],
+  "sources": [
+    "../../Note.svelte",
+    "../../NoteList.svelte"
+  ],
+  "sourcesContent": [
+    "<div class=\"note\">\n  <span class=\"delete\" on:click={() => { deleteNote(notefile); }}>❌</span>\n  <span class=\"edit\"   on:click={() => { editFile(notefile);   }}>✏️</span>\n  {noteName}\n</div>\n\n<style>\n  .note {\n    display: flex;\n    flex-direction: row;\n    margin: 10px 0p 0px 0px;\n  }\n\n  .delete {\n    margin: 0px 5px;\n    cursor: pointer;\n  }\n\n  .edit {\n    margin: 0px 5px;\n    cursor: pointer;\n  }\n</style>\n\n<script>\n  export let editFile;\n  export let notefile;\n  export let deleteNote;\n\n  let noteName = '';\n  \n  ; noteName = filename(notefile);\n\n  function filename(fn) {\n    var parts = fn.split('\\/');\n    return parts[parts.length-1];\n  }\n</script>\n",
+    "<div id=\"NoteList\">\n  <p>Notes in: {projectDir}</p>\n  {#each notes as note}\n    <Note notefile={note} editFile={editFile} deleteNote={deleteNote} />\n  {:else}\n    <p>Loading Notes....</p>\n  {/each}\n  <div id=\"addNote\">\n    <label for=\"filename\">New File Name:</label>\n    <input id=\"filename\" type=\"text\" bind:value={newfilename} />\n    <button on:click={createNewNote}>New Note</button>\n  </div>\n</div>\n\n<style>\n  #NoteList {\n    display: flex;\n    flex-direction: column;\n  }\n\n  #addNote {\n    margin: 10px 0px 0px 0px;\n  }\n</style>\n\n<script>\n  import { onMount } from 'svelte';\n\n  import Note from './Note.svelte';\n\n  export let projectDir;\n  export let editFile;\n  export let fig;\n  \n  let newfilename = '';\n  let notes = [];\n\n  onMount(() => {\n    getProjectNotes(projectDir);\n  });\n\n  function createNewNote() {\n    if(newfilename !== '') {\n      fig.execute('/usr/bin/touch \"' + projectDir + '/.notes/' + newfilename + '\";', (data, err) => {\n        notes = notes.push(projectDir + '/.notes/' + newfilename);\n        newfilename = '';\n      });\n    }\n  }\n\n  function getProjectNotes(pjdir) {\n    if((typeof pjdir !== 'undefined') &&\n       (pjdir !== '')) {\n      //\n      // Get a list of note files in the project.\n      //\n      console.log('/bin/ls \"' + pjdir + '/.notes/\"');\n      fig.execute('/bin/ls \"' + pjdir + '/.notes/\"', (data, err) => {\n        if(!err) {\n          if(data.includes('No such file')) {\n            fig.execute('/bin/mkdir \"' + pjdir + '/.notes/\"', (data, err) => {\n              notes = [];\n            });\n          } else {\n            notes = data.split('\\n').filter(item => ((item[0] !== '.')&&(item !== ''))).map(item => {\n              return(pjdir + \"/.notes/\" + item);\n            });\n          }\n        }\n      });\n    }\n  }\n\n  function deleteNote(note) {\n    fig.execute('/bin/rm \"' + note + '\"', (data,err) => {\n      notes = notes.filter(item => !item.includes(note));\n    });\n  }\n</script>\n"
+  ],
   "names": [],
-  "mappings": ""
+  "mappings": "AAOE,KAAK,cAAC,CAAC,AACL,OAAO,CAAE,IAAI,CACb,cAAc,CAAE,GAAG,CACnB,MAAM,CAAE,IAAI,CAAC,EAAE,CAAC,GAAG,CAAC,GAAG,AACzB,CAAC,AAED,OAAO,cAAC,CAAC,AACP,MAAM,CAAE,GAAG,CAAC,GAAG,CACf,MAAM,CAAE,OAAO,AACjB,CAAC,AAED,KAAK,cAAC,CAAC,AACL,MAAM,CAAE,GAAG,CAAC,GAAG,CACf,MAAM,CAAE,OAAO,AACjB,CAAC;ACND,SAAS,cAAC,CAAC,AACT,OAAO,CAAE,IAAI,CACb,cAAc,CAAE,MAAM,AACxB,CAAC,AAED,QAAQ,cAAC,CAAC,AACR,MAAM,CAAE,IAAI,CAAC,GAAG,CAAC,GAAG,CAAC,GAAG,AAC1B,CAAC"
 }

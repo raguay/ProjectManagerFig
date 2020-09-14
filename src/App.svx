@@ -3,6 +3,7 @@
 
   import ProjectSelector from './components/ProjectSelector.svelte';
   import ButtonElement from './components/ButtonElement.svelte';
+  import NoteList from './components/NoteList.svelte';
   
   export let fig;
 
@@ -28,6 +29,8 @@
   let showNewTemplate = false;
   let useTemplate = 'none';
   let showEditTemplate = false;
+  let PMFile = '~/.projectFiles/projectmanager.json';
+  let showNotes = false;
   
   function close() {
     fig.reposition("7");
@@ -37,7 +40,7 @@
     //
     // Get the project manager application information.
     //
-    fig.fread('~/.fig/apps/projectmanager/projectmanager.json',(data, err) => {
+    fig.fread(PMFile, (data, err) => {
       if(err) {
         //
         // Files doesn't exist. Set the defaults and save the file.
@@ -130,7 +133,7 @@
         //
         // They don't have the file. Use the environment editor.
         //
-        fig.execute(fig.env.EDITOR + " " + file, (out, err) => {});
+        fig.execute(fig.env.EDITOR + " '" + file + "'", (out, err) => {});
       } else {
         //
         // They are using it. Use what it has instead. It's not a command line, so run 
@@ -138,9 +141,9 @@
         //
         data = data.trim();
         if(data[0] === '/') {
-          fig.execute("open -a '" + data.trim() + "' " + file, (out, err) => {});
+          fig.execute("open -a '" + data.trim() + "' '" + file + "'", (out, err) => {});
         } else {
-          fig.execute(data + " " + file, (out, err) => {});
+          fig.execute(data + " '" + file + "'", (out, err) => {});
         }
       }
     });
@@ -420,7 +423,7 @@
   }
 
   function saveAppData() {
-    fig.fwrite('~/.fig/apps/projectmanager/projectmanager.json', 
+    fig.fwrite(PMFile, 
                JSON.stringify({ expert: expert, templates: templates}), (err) => {});
   }
 
@@ -514,13 +517,14 @@
     saveAppData();
   }
 </script>
+
 <div style="display: flex; flex-direction: column;">
 <div style="display: flex; flex-direction: row;">
 <label for='expert'>Expert</label>
 <input id='expert' name='expert' type='checkbox' checked={expert} on:change={toggleExpertSave} style="margin: 3px 0px 0px 10px;" />
 </div>
 
-{#if !showDialog && !showNewTemplate && !showEditTemplate}
+{#if !showDialog && !showNewTemplate && !showEditTemplate && !showNotes }
 
 {#if !expert}
 Welcome to the Project Manager for Fig. Here, you can go to your projects, run scripts, and much more.
@@ -562,6 +566,17 @@ script in the root directory of the project, and return to your directory.
 This will open the project in the editor defined in the `$EDITOR` environment variable or the 
 editor listed in the `~/.myeditorchoice` file, which is used by the My Editor workflow for Alfred or the CurrentFiles script used with [BitBar](http://getbitbar.org), 
 [TextBar](http://richsomerfield.com/apps/textbar/), and ScriptBar (my own version that isn't available yet).
+
+</ButtonElement>
+
+<ButtonElement show={!expert} buttonFunction={() => { showNotes = true; }} buttonName="Project Notes">
+
+#### Project Notes
+
+This button will show all the notes files associated with the current project. These are the 
+same notes used in the [fman Notes plugin](https://github.com/raguay/Notes). Here, you will be able to create a new note, edit 
+a note, or delete a note. All project notes are in the `.notes` directory for the current 
+project.
 
 </ButtonElement>
 
@@ -797,6 +812,22 @@ execute after the template is copied.
 <button style="margin: 5px; padding: 3px;" on:click={setDirAsTemplate} >Set Directory</button>
 </div>
 
+{:else if showNotes}
+
+{#if !expert}
+
+#### Project Notes
+
+Here is a list of all project notes. You can edit a note, delete a note, or create a note.
+
+{/if}
+
+<NoteList projectDir={currentProjectDir}
+          editFile={runEditor}
+          fig={fig}
+/>
+
+<button style="margin: 5px; padding: 3px;" on:click={() => { showNotes = false;}} >Exit Notes</button>
 {:else}
 
 ### Give a name for the Project: 
