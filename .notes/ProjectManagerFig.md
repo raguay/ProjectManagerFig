@@ -6,6 +6,8 @@ fig. I am constantly adding to it with new ideas.
 ### Current Working
 
 - testing....
+- Adding new templates in the Edit Templates isn't working.
+- It is possible to add the same template more than once.
 
 ### Finished
 

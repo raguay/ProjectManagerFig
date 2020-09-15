@@ -452,17 +452,30 @@
     // on the web, and runScript contains the commands to run in the freshly copied directory 
     // to initialize the project or do what ever is needed to get the template ready for use.
     //
-    if((typeof templateDirUrl !== 'undefined') &&
+    if((typeof templateName === 'string') &&
        (typeof templateDirUrl === 'string') &&
        (templateDirUrl !== '') &&
        (typeof local === 'boolean') &&
        (typeof runScript === 'string')) {
-      templates.push({
+      if(typeof templates !== 'object') templates = [];
+      var newTemp = {
         name: templateName,
         templateDirUrl: templateDirUrl,
         local: local,
         runScript: runScript
-      });
+      };
+      var test = templates.find(item => item.name.includes(templateName));
+      if(typeof test === 'undefined') {
+        templates.push(newTemp);
+      } else {
+        templates = templates.map(item => {
+          if(item.name.includes(templateName)) {
+            item = newTemp;
+          }
+          return item;
+        });
+      }
+      templates = templates;
       saveAppData();
     }
   }
@@ -505,15 +518,26 @@
   }
 
   function saveTemplate() {
+    var found = false;
     templates = templates.map(item => {
       if(item.name.includes(useTemplate)) {
         item.name = templateName;
         item.templateDirUrl = templateDirUrl;
         item.local = local;
         item.runScript = runScript;
+        found = true;
       }
       return item;
     });
+    if(!found) {
+      templates.push({
+        name: templateName,
+        templateDirUrl: templateDirUrl,
+        local: local,
+        runScript: runScript
+      });
+    }
+    templates = templates;
     saveAppData();
   }
 </script>
@@ -767,7 +791,7 @@ Each template has the following data structure:
 <button style="margin: 5px; padding: 3px;" on:click={() => { showEditTemplate = false;}} >Return</button>
 <button style="margin: 5px; padding: 3px;" on:click={removeTemplate}>Delete</button>
 <button style="margin: 5px; padding: 3px;" on:click={newBlankTemplate}>New</button>
-<button style="margin: 5px; padding: 3px;" on:click={saveTemplate} >Save Edit</button>
+<button style="margin: 5px; padding: 3px;" on:click={saveTemplate} >Save Template</button>
 </div>
 
 {:else if showNewTemplate}
