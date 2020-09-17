@@ -123,7 +123,7 @@
     initProjects();
   }
 
-  function runEditor(file) {
+  function runEditor(file, lastCommand = null) {
     //
     // Now, see if they have the My Editor workflow or the BitBar, TextBar, or ScriptBar
     // equivalent.
@@ -133,17 +133,23 @@
         //
         // They don't have the file. Use the environment editor.
         //
-        fig.execute(fig.env.EDITOR + " '" + file + "'", (out, err) => {});
+        fig.execute(fig.env.EDITOR + " '" + file + "'", (out, err) => {
+          if(lastCommand !== null) fig.execute(lastCommand, (data,err) => {});
+        });
       } else {
         //
         // They are using it. Use what it has instead. It's not a command line, so run 
         // it in the macOS way.
         //
-        data = data.trim();
+        var editor = data.trim();
         if(data[0] === '/') {
-          fig.execute("open -a '" + data.trim() + "' '" + file + "'", (out, err) => {});
+          fig.execute("open -a '" + editor + "' '" + file + "'", (out, err) => {
+            if(lastCommand !== null) fig.execute(lastCommand, (data,err)=>{});
+          });
         } else {
-          fig.execute(data + " '" + file + "'", (out, err) => {});
+          fig.execute(editor + " '" + file + "'", (out, err) => {
+            if(lastCommand !== null) fig.execute(lastCommand, (data,err) => {});
+          });
         }
       }
     });
@@ -377,7 +383,10 @@
   }
   
   function EditProjectScript() {
-    runEditor("'" + currentProjectDir + "/.startproject'");
+    var psf = currentProjectDir + "/.startproject";
+    fig.execute('/bin/chmod a-x "' + psf + '"',(data,err) => {
+      runEditor((psf), '/bin/chmod a+x "' + psf + '"');
+    });
   }
 
   function isChildOf(child, parent) {
@@ -390,27 +399,27 @@
   }
 
   function OpenProjectInEditor() {
-    runEditor('"' + currentProjectDir + '"');
+    runEditor(currentProjectDir);
   }
 
   function editMaskFile() {
-    runEditor('"' + currentProjectDir + '/maskfile.md"');
+    runEditor(currentProjectDir + '/maskfile.md');
   }
   
   function editMaidFile() {
-    runEditor('"' + currentProjectDir + '/maidfile.md"');
+    runEditor(currentProjectDir + '/maidfile.md');
   }
   
   function editNPMFile() {
-    runEditor('"' + currentProjectDir + '/package.json"');
+    runEditor(currentProjectDir + '/package.json');
   }
   
   function editGruntFile() {
-    runEditor('"' + currentProjectDir + '/Gruntfile.js"');
+    runEditor(currentProjectDir + '/Gruntfile.js');
   }
  
   function editGulpFile() {
-    runEditor('"' + currentProjectDir + '/gulpfile.js"');
+    runEditor(currentProjectDir + '/gulpfile.js');
   }
 
   function runTask(tsk) {
