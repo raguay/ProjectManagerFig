@@ -13,6 +13,7 @@
   let showDialog = false;
   let runCleanUp = null;
   let expert = false;
+  let darkmode = false;
   let maidfile = false;
   let npmfile = false;
   let maskfile = false;
@@ -31,6 +32,12 @@
   let showEditTemplate = false;
   let PMFile = '~/.projectFiles/projectmanager.json';
   let showNotes = false;
+  let styles = {
+    DMbkgrdcolor: '#282B35',
+    bkgrdcolor: 'white',
+    DMcolor: '#F7F7F1',
+    color: 'black'
+  }
   
   function close() {
     fig.reposition("7");
@@ -46,6 +53,13 @@
         // Files doesn't exist. Set the defaults and save the file.
         //
         expert = false;
+        darkmode = false;
+        styles = {
+          DMbkgrdcolor: '#282B35',
+          bkgrdcolor: 'white',
+          DMcolor: '#F7F7F1',
+          color: 'black'
+        }
         templates = [];
         saveAppData();
       } else {
@@ -54,7 +68,18 @@
         //
         var appData = JSON.parse(data);
         if(typeof appData.expert !== 'undefined') expert = appData.expert;
+        if(typeof appData.darkmode !== 'undefined') darkmode = appData.darkmode;
         if(typeof appData.templates !== 'undefined') templates = appData.templates;
+        if(typeof appData.styles !== 'undefined') styles = appData.styles;
+
+        var body = document.getElementsByTagName('body')[0];
+        if(darkmode) {
+          body.style.color = styles.DMcolor;
+          body.style.backgroundColor = styles.DMbkgrdcolor;
+        } else {
+          body.style.color = styles.color;
+          body.style.backgroundColor = styles.bkgrdcolor;
+        }
       }
     });
 
@@ -431,9 +456,22 @@
     saveAppData();
   }
 
+  function toggleDarkModeSave() {
+    darkmode = !darkmode;
+    var body = document.getElementsByTagName('body')[0];
+    if(darkmode) {
+      body.style.color = styles.DMcolor;
+      body.style.backgroundColor = styles.DMbkgrdcolor;
+    } else {
+      body.style.color = styles.color;
+      body.style.backgroundColor = styles.bkgrdcolor;
+    }
+    saveAppData();
+  }
+
   function saveAppData() {
     fig.fwrite(PMFile, 
-               JSON.stringify({ expert: expert, templates: templates}), (err) => {});
+               JSON.stringify({ expert: expert, darkmode: darkmode, styles: styles, templates: templates}), (err) => {});
   }
 
   function gitStatus() {
@@ -551,10 +589,12 @@
   }
 </script>
 
-<div style="display: flex; flex-direction: column;">
+<div style="display: flex; flex-direction: column; background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};">
 <div style="display: flex; flex-direction: row;">
 <label for='expert'>Expert</label>
 <input id='expert' name='expert' type='checkbox' checked={expert} on:change={toggleExpertSave} style="margin: 3px 0px 0px 10px;" />
+<label for='darkMode' style="margin: 0px 0px 0px 10px;">Dark Mode</label>
+<input id='darkMode' name='darkMode' type='checkbox' checked={darkmode} on:change={toggleDarkModeSave} style="margin: 3px 0px 0px 10px;" />
 </div>
 
 {#if !showDialog && !showNewTemplate && !showEditTemplate && !showNotes }
@@ -566,9 +606,9 @@ The `Expert` checkbox above will hide these information areas and just show the 
 
 {/if}
 
-### Current Project: <ProjectSelector project={currentProject} projects={projects} on:projectChange={(e) => { setProjectByName(e.detail); }} /> 
+### Current Project: <ProjectSelector project={currentProject} projects={projects} on:projectChange={(e) => { setProjectByName(e.detail); }} darkmode={darkmode} styles={styles} /> 
 
-<ButtonElement show={!expert} buttonFunction={gotoProjDir} buttonName="Go to Project">
+<ButtonElement show={!expert} buttonFunction={gotoProjDir} buttonName="Go to Project" styles={styles} darkmode={darkmode}>
 
 #### Goto Project Directory
 
@@ -588,11 +628,11 @@ script in the root directory of the project, and return to your directory.
 
 {#if tasks !== null}
   {#each tasks as task}
-    <button on:click={() => { runTask(task); }}>{task.name}</button>
+    <button style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" on:click={() => { runTask(task); }}>{task.name}</button>
   {/each}
 {/if}
 
-<ButtonElement show={!expert} buttonFunction={OpenProjectInEditor} buttonName="Edit Project">
+<ButtonElement show={!expert} buttonFunction={OpenProjectInEditor} buttonName="Edit Project"  styles={styles} darkmode={darkmode} >
 
 #### Edit the Project
 
@@ -602,7 +642,7 @@ editor listed in the `~/.myeditorchoice` file, which is used by the My Editor wo
 
 </ButtonElement>
 
-<ButtonElement show={!expert} buttonFunction={() => { showNotes = true; }} buttonName="Project Notes">
+<ButtonElement show={!expert} buttonFunction={() => { showNotes = true; }} buttonName="Project Notes" styles={styles} darkmode={darkmode}>
 
 #### Project Notes
 
@@ -614,7 +654,7 @@ project.
 </ButtonElement>
 
 {#if maidfile}
-<ButtonElement show={!expert} buttonFunction={editMaidFile} buttonName="Edit Maid File">
+<ButtonElement show={!expert} buttonFunction={editMaidFile} buttonName="Edit Maid File" styles={styles} darkmode={darkmode}>
 
 #### Edit the Maid File
 
@@ -624,7 +664,7 @@ Maid is a task runner written in JavaScript for defining actions using a markdow
 {/if}
 
 {#if gulpfile}
-<ButtonElement show={!expert} buttonFunction={editGulpFile} buttonName="Edit Gulp File">
+<ButtonElement show={!expert} buttonFunction={editGulpFile} buttonName="Edit Gulp File" styles={styles} darkmode={darkmode}>
 
 #### Edit the Gulp File
 
@@ -634,7 +674,7 @@ Gulp is a task runner written in JavaScript for defining actions using a javascr
 {/if}
 
 {#if gruntfile}
-<ButtonElement show={!expert} buttonFunction={editGruntFile} buttonName="Edit Grunt File">
+<ButtonElement show={!expert} buttonFunction={editGruntFile} buttonName="Edit Grunt File" styles={styles} darkmode={darkmode}>
 
 #### Edit the Grunt File
 
@@ -644,7 +684,7 @@ Grunt is a task runner written in JavaScript for defining actions using a javasc
 {/if}
 
 {#if maskfile}
-<ButtonElement show={!expert} buttonFunction={editMaskFile} buttonName="Edit Mask File">
+<ButtonElement show={!expert} buttonFunction={editMaskFile} buttonName="Edit Mask File" styles={styles} darkmode={darkmode}>
 
 #### Edit the Mask File
 
@@ -654,7 +694,7 @@ Mask is a task runner written in Rust for defining actions using a markdown file
 {/if}
 
 {#if npmfile}
-<ButtonElement show={!expert} buttonFunction={editNPMFile} buttonName="Edit Npm File">
+<ButtonElement show={!expert} buttonFunction={editNPMFile} buttonName="Edit Npm File"  styles={styles} darkmode={darkmode}>
 
 #### Edit the npm File
 
@@ -663,7 +703,7 @@ This will edit the `package.json` file for the npm project.
 </ButtonElement>
 {/if}
 
-<ButtonElement show={!expert} buttonFunction={setCurrentDirectory} buttonName="Set Current Directory as Project">
+<ButtonElement show={!expert} buttonFunction={setCurrentDirectory} buttonName="Set Current Directory as Project" styles={styles} darkmode={darkmode}>
 
 #### Set as Current Project or Create New Project Directory
 
@@ -678,7 +718,7 @@ after the script in the variable `Script` is ran. The script variable is automat
 
 </ButtonElement>
 
-<ButtonElement show={!expert} buttonFunction={setDirAsTemplate} buttonName="Set Current Directory as Templage">
+<ButtonElement show={!expert} buttonFunction={setDirAsTemplate} buttonName="Set Current Directory as Templage" styles={styles} darkmode={darkmode}>
 
 #### Set the Current Directory as a Template
 
@@ -687,7 +727,7 @@ for adding the different fields that make up a template specification.
 
 </ButtonElement>
 
-<ButtonElement show={!expert} buttonFunction={RunProjectScript} buttonName="Run Project Script">
+<ButtonElement show={!expert} buttonFunction={RunProjectScript} buttonName="Run Project Script" styles={styles} darkmode={darkmode}>
 
 #### Run the Project Script
 
@@ -695,7 +735,7 @@ This will run the current project's start script. This script is in the top of t
 
 </ButtonElement>
 
-<ButtonElement show={!expert} buttonFunction={EditProjectScript} buttonName="Edit Project Script">
+<ButtonElement show={!expert} buttonFunction={EditProjectScript} buttonName="Edit Project Script" styles={styles} darkmode={darkmode}>
 
 #### Edit the Project Script
 
@@ -707,7 +747,7 @@ editor listed in the `~/.myeditorchoice` file, which is used by the My Editor wo
 
 {#if gitfile}
 
-<ButtonElement show={!expert} buttonFunction={gitStatus} buttonName="Git Status">
+<ButtonElement show={!expert} buttonFunction={gitStatus} buttonName="Git Status" styles={styles} darkmode={darkmode}>
 
 #### Git Status
 
@@ -716,25 +756,25 @@ project to run this command.
 
 </ButtonElement>
 
-<ButtonElement show={!expert} buttonFunction={gitCommitPush} buttonName="Git Commit and Push">
+<ButtonElement show={!expert} buttonFunction={gitCommitPush} buttonName="Git Commit and Push" styles={styles} darkmode={darkmode}>
 
 #### Git Commit and Push
 
 This will take the message below and commit the changes to the git repository. Once committed, 
 it will push to GitHub. You don't have to be in the root directory of the project to run this command.
 
-<div slot="extra" style="width: 100%; display: flex; flex-direction: column;">
+<div slot="extra" style="width: 100%; display: flex; flex-direction: column; background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};">
 
 #### Git Commit Message:
 
-  <input type="text" bind:value={gitmessage} />
+  <input type="text" bind:value={gitmessage} style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" />
 </div>
 
 </ButtonElement>
 
 {/if}
 
-<ButtonElement show={!expert} buttonFunction={editTemplates} buttonName="Edit Templates">
+<ButtonElement show={!expert} buttonFunction={editTemplates} buttonName="Edit Templates" styles={styles} darkmode={darkmode}>
 
 #### Edit Template
 
@@ -743,7 +783,7 @@ template, or create a new blank template.
 
 </ButtonElement>
 
-<ButtonElement show={!expert} buttonFunction={close} buttonName="Close">
+<ButtonElement show={!expert} buttonFunction={close} buttonName="Close" styles={styles} darkmode={darkmode}>
 
 #### Leave the Project Manager
 
@@ -770,7 +810,7 @@ Each template has the following data structure:
 
 #### Select Template:
 
-<select bind:value={useTemplate} on:change={setTemplateToEdit} >
+<select bind:value={useTemplate} on:change={setTemplateToEdit} style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};">
   <option value='none'>None</option>
   {#each templates as template}
     <option value={template.name}>{template.name}</option>
@@ -781,26 +821,26 @@ Each template has the following data structure:
 
 <div style="display: flex; flex-direction: row;">
 <label style="margin: 7px 10px 0px 0px;">Name:</label>
-<input type="text" bind:value={templateName} />
+<input type="text" bind:value={templateName} style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" />
 </div>
 <div style="display: flex; flex-direction: row;">
 <label style="margin: 7px 10px 0px 0px;">Path:</label>
-<input type="text" bind:value={templateDirUrl} />
+<input type="text" bind:value={templateDirUrl} style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" />
 </div>
 <div style="display: flex; flex-direction: row;">
 <label style="margin: 0px 10px 0px 0px;">Local:</label>
-<input style="margin: 2px 0px 0px 0px;" type="checkbox" bind:checked={local} />
+<input style="margin: 2px 0px 0px 0px; background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" type="checkbox" bind:checked={local} />
 </div>
 <div style="display: flex; flex-direction: row;">
 <label style="margin: 8px 10px 0px 0px;">Script:</label>
-<input type="text" bind:value={runScript} />
+<input type="text" bind:value={runScript} style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" />
 </div>
 
 <div style="display: flex; flex-direction: row;">
-<button style="margin: 5px; padding: 3px;" on:click={() => { showEditTemplate = false;}} >Return</button>
-<button style="margin: 5px; padding: 3px;" on:click={removeTemplate}>Delete</button>
-<button style="margin: 5px; padding: 3px;" on:click={newBlankTemplate}>New</button>
-<button style="margin: 5px; padding: 3px;" on:click={saveTemplate} >Save Template</button>
+<button style="margin: 5px; padding: 3px; background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" on:click={() => { showEditTemplate = false;}} >Return</button>
+<button style="margin: 5px; padding: 3px; background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" on:click={removeTemplate}>Delete</button>
+<button style="margin: 5px; padding: 3px; background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" on:click={newBlankTemplate}>New</button>
+<button style="margin: 5px; padding: 3px; background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" on:click={saveTemplate} >Save Template</button>
 </div>
 
 {:else if showNewTemplate}
@@ -825,24 +865,24 @@ execute after the template is copied.
 
 <div style="display: flex; flex-direction: row;">
 <label style="margin: 7px 10px 0px 0px;">Name:</label>
-<input type="text" bind:value={templateName} />
+<input type="text" bind:value={templateName} style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" />
 </div>
 <div style="display: flex; flex-direction: row;">
 <label style="margin: 7px 10px 0px 0px;">Path:</label>
-<input type="text" bind:value={templateDirUrl} />
+<input type="text" bind:value={templateDirUrl} style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" />
 </div>
 <div style="display: flex; flex-direction: row;">
 <label style="margin: 0px 10px 0px 0px;">Local:</label>
-<input style="margin: 2px 0px 0px 0px;" type="checkbox" bind:checked={local} />
+<input type="checkbox" bind:checked={local} style="margin: 2px 0px 0px 0px; background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" />
 </div>
 <div style="display: flex; flex-direction: row;">
 <label style="margin: 8px 10px 0px 0px;">Script:</label>
-<input type="text" bind:value={runScript} />
+<input type="text" bind:value={runScript} style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" />
 </div>
 
 <div style="display: flex; flex-direction: row;">
-<button style="margin: 5px; padding: 3px;" on:click={() => { showNewTemplate = false;}} >Cancel</button>
-<button style="margin: 5px; padding: 3px;" on:click={setDirAsTemplate} >Set Directory</button>
+<button style="margin: 5px; padding: 3px; background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" on:click={() => { showNewTemplate = false;}} >Cancel</button>
+<button style="margin: 5px; padding: 3px; background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" on:click={setDirAsTemplate} >Set Directory</button>
 </div>
 
 {:else if showNotes}
@@ -858,27 +898,29 @@ Here is a list of all project notes. You can edit a note, delete a note, or crea
 <NoteList projectDir={currentProjectDir}
           editFile={runEditor}
           fig={fig}
+          darkmode={darkmode}
+          styles={styles}
 />
 
-<button style="margin: 5px; padding: 3px;" on:click={() => { showNotes = false;}} >Exit Notes</button>
+<button style="margin: 5px; padding: 3px; background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" on:click={() => { showNotes = false;}} >Exit Notes</button>
 {:else}
 
 ### Give a name for the Project: 
 
-<input type="text" bind:value={currentProject} />
+<input type="text" bind:value={currentProject} style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" />
 
 ### Use Template
 
 If you want to install a template, change from 'none' to the template you want to use.
 
-<select bind:value={useTemplate} >
+<select bind:value={useTemplate} style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" >
   <option value='none'>None</option>
   {#each templates as template}
     <option value={template.name}>{template.name}</option>
   {/each}
 </select>
 
-<button on:click={() => {showDialog = false; runCleanUp(); }}>Return</button>
+<button style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" on:click={() => {showDialog = false; runCleanUp(); }}>Return</button>
 {/if}
 
 </div>

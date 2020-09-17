@@ -1,14 +1,14 @@
 <div id="NoteList">
   <p>Notes in: {projectDir}</p>
   {#each notes as note}
-    <Note notefile={note} editFile={editFile} deleteNote={deleteNote} />
+    <Note notefile={note} editFile={editFile} deleteNote={deleteNote} /> 
   {:else}
     <p>Loading Notes....</p>
   {/each}
   <div id="addNote">
     <label for="filename">New File Name:</label>
-    <input id="filename" type="text" bind:value={newfilename} />
-    <button on:click={createNewNote}>New Note</button>
+    <input id="filename" type="text" bind:value={newfilename} style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" />
+    <button on:click={createNewNote} style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};">New Note</button>
   </div>
 </div>
 
@@ -31,6 +31,8 @@
   export let projectDir;
   export let editFile;
   export let fig;
+  export let darkmode;
+  export let styles;
   
   let newfilename = '';
   let notes = [];
