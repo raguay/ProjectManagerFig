@@ -35,6 +35,8 @@
   let styles = {
     DMbkgrdcolor: '#282B35',
     bkgrdcolor: 'white',
+    DMhvbkgrdcolor: '#80FFEA',
+    hvbkgrdcolor: 'cyan',
     DMcolor: '#F7F7F1',
     color: 'black'
   }
@@ -58,19 +60,26 @@
           DMbkgrdcolor: '#282B35',
           bkgrdcolor: 'white',
           DMcolor: '#F7F7F1',
+          DMhvbkgrdcolor: '#80FFEA',
+          hvbkgrdcolor: 'cyan',
           color: 'black'
         }
         templates = [];
         saveAppData();
       } else {
         //
-        // Parse the information.
+        // Parse the information. Fix any data that wasn't
+        // present in earilier versions.
         //
         var appData = JSON.parse(data);
         if(typeof appData.expert !== 'undefined') expert = appData.expert;
         if(typeof appData.darkmode !== 'undefined') darkmode = appData.darkmode;
         if(typeof appData.templates !== 'undefined') templates = appData.templates;
         if(typeof appData.styles !== 'undefined') styles = appData.styles;
+        if(typeof styles.DMhvbkgrdcolor === 'undefined') {
+          styles.DMhvbkgrdcolor = '#80FFEA';
+          styles.hvbkgrdcolor = 'cyan';
+        }
 
         var body = document.getElementsByTagName('body')[0];
         if(darkmode) {
@@ -123,6 +132,7 @@
   function setProjectByName(name) {
     currentProject = null;
     currentProjectDir = null;
+    if(typeof name !== 'string') name = new String(name);
     projects.forEach((row) => {
       if(row !== '') {
         if(name.includes(row[0])) {
@@ -820,20 +830,20 @@ Each template has the following data structure:
 #### Template Items:
 
 <div style="display: flex; flex-direction: row;">
-<label style="margin: 7px 10px 0px 0px;">Name:</label>
-<input type="text" bind:value={templateName} style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" />
+<label for="templateName" style="margin: 7px 10px 0px 0px;">Name:</label>
+<input name="templateName" type="text" bind:value={templateName} style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" />
 </div>
 <div style="display: flex; flex-direction: row;">
-<label style="margin: 7px 10px 0px 0px;">Path:</label>
-<input type="text" bind:value={templateDirUrl} style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" />
+<label for="templateDirUrl" style="margin: 7px 10px 0px 0px;">Path:</label>
+<input name="templateDirUrl" type="text" bind:value={templateDirUrl} style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" />
 </div>
 <div style="display: flex; flex-direction: row;">
-<label style="margin: 0px 10px 0px 0px;">Local:</label>
-<input style="margin: 2px 0px 0px 0px; background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" type="checkbox" bind:checked={local} />
+<label for="localq" style="margin: 0px 10px 0px 0px;">Local:</label>
+<input name="localq" style="margin: 2px 0px 0px 0px; background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" type="checkbox" bind:checked={local} />
 </div>
 <div style="display: flex; flex-direction: row;">
-<label style="margin: 8px 10px 0px 0px;">Script:</label>
-<input type="text" bind:value={runScript} style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" />
+<label for="templateScript" style="margin: 8px 10px 0px 0px;">Script:</label>
+<input name="templateScript" type="text" bind:value={runScript} style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" />
 </div>
 
 <div style="display: flex; flex-direction: row;">
@@ -864,20 +874,24 @@ execute after the template is copied.
 {/if}
 
 <div style="display: flex; flex-direction: row;">
-<label style="margin: 7px 10px 0px 0px;">Name:</label>
+<label style="margin: 7px 10px 0px 0px;">Name:
 <input type="text" bind:value={templateName} style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" />
+</label>
 </div>
 <div style="display: flex; flex-direction: row;">
-<label style="margin: 7px 10px 0px 0px;">Path:</label>
+<label style="margin: 7px 10px 0px 0px;">Path:
 <input type="text" bind:value={templateDirUrl} style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" />
+</label>
 </div>
 <div style="display: flex; flex-direction: row;">
-<label style="margin: 0px 10px 0px 0px;">Local:</label>
+<label style="margin: 0px 10px 0px 0px;">Local:
 <input type="checkbox" bind:checked={local} style="margin: 2px 0px 0px 0px; background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" />
+</label>
 </div>
 <div style="display: flex; flex-direction: row;">
-<label style="margin: 8px 10px 0px 0px;">Script:</label>
+<label style="margin: 8px 10px 0px 0px;">Script:
 <input type="text" bind:value={runScript} style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" />
+</label>
 </div>
 
 <div style="display: flex; flex-direction: row;">
