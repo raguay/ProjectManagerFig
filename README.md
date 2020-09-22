@@ -54,6 +54,7 @@ work on my system. Therefore, you will need to run `fig local ~/run/projectmanag
 
 - Go to predefined projects
 - Edit the project directory
+- Delete the current project from the list of projects.
 - Edit maid, mask, npm, gulp, and grunt configuration files
 - Run tasks defined in maid, mask, npm, gulp, and grunt
 - Edit/Run the project startup script
@@ -65,6 +66,7 @@ work on my system. Therefore, you will need to run `fig local ~/run/projectmanag
 - Project templates: either local or on GitHub with a initializer script that will be ran after 
 copying.
 - Project Notes: a special directory `.notes` will contain notes you create for this project. It works with the [fman](https://fman.io/) [Notes plugin](https://github.com/raguay/Notes). You can edit, delete, and create new notes.
+- Better styling and dark mode 
 
 ### Ideals and Suggestions
 
@@ -72,5 +74,4 @@ If there is a feature you would like to see in the application or a bug, just cr
 repository with the subject `[feature]` or `[bug]` in the subject line. I'm still working on:
 
 - Mask subcommands and parameters
-- Better styling and dark mode (depending on what the author's of fig decide about styling the whole application)
 
