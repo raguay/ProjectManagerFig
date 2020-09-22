@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
 
   import ProjectSelector from './components/ProjectSelector.svelte';
+  import TemplateSelector from './components/TemplateSelector.svelte';
   import ButtonElement from './components/ButtonElement.svelte';
   import NoteList from './components/NoteList.svelte';
   
@@ -28,10 +29,13 @@
   let runScript = 'setupTemplate';
   let templateName = '';
   let showNewTemplate = false;
-  let useTemplate = 'none';
+  let useTemplate = 'None';
   let showEditTemplate = false;
   let PMFile = '~/.projectFiles/projectmanager.json';
   let showNotes = false;
+  let tempLists;
+  let showConfirm = false;
+  let confirmFunction = null;
   let styles = {
     DMbkgrdcolor: '#282B35',
     bkgrdcolor: 'white',
@@ -314,7 +318,6 @@
         showDialog = true;
         runCleanUp = FinishNewProject;
       }
-      SaveCurrentProject();
     });
   }
   
@@ -335,6 +338,7 @@
     narr[0] = currentProject;
     narr[1] = currentProjectDir;
     projects.push(narr);
+    projects = projects;
     saveProjects();
 
     //
@@ -343,9 +347,15 @@
     fig.execute('touch "' + currentProjectDir + '/.startproject"; chmod a+x "' + currentProjectDir + '/.startproject";', (out, err) => {});
 
     //
+    // Setup the project buttons.
+    //
+    initProjects();
+    
+    //
     // If using template, then copy it into place.
     //
-    if(!useTemplate.includes('none')) {
+    if(!useTemplate.includes('None')) {
+      console.log(useTemplate);
       var template = templates.find(item => item.name.includes(useTemplate));
       if(template.local) {
         //
@@ -369,7 +379,7 @@
 
   function removeTemplate() {
     templates = templates.filter(item => !item.name.includes(useTemplate));
-    useTemplate = 'none';
+    useTemplate = 'None';
     templateName = '';
     templateDirUrl = '';
     runScript = 'setupTemplate';
@@ -378,7 +388,7 @@
   }
 
   function newBlankTemplate() {
-    useTemplate = 'none';
+    useTemplate = 'None';
     templateName = 'New Template';
     templateDirUrl = '';
     runScript = 'setupTemplate';
@@ -409,6 +419,7 @@
       } else {
         pth = data.trim();
       }
+      console.log(pth);
       fun(pth);
     });
   }
@@ -548,6 +559,7 @@
       // Turn on the template dialog so the user can fill it in.
       //
       getCurrentDirectory((dir) => {
+        console.log(dir);
         var dirName = dir.split('\/');
         templateName = dirName[dirName.length-1];
         templateDirUrl = dir;
@@ -559,7 +571,7 @@
 
   function editTemplates() {
     showEditTemplate = true;
-    useTemplate = 'none';
+    useTemplate = 'None';
     templateName = '';
     templateDirUrl = '';
     runScript = 'setupTemplate';
@@ -597,6 +609,14 @@
     templates = templates;
     saveAppData();
   }
+
+  function deleteProject() {
+    projects = projects.filter(item => !item[0].includes(currentProject));
+    currentProject = '';
+    currentProjectDir = '';
+    tasks = [];
+    saveAppData();
+  }
 </script>
 
 <div style="display: flex; flex-direction: column; background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};">
@@ -607,7 +627,7 @@
 <input id='darkMode' name='darkMode' type='checkbox' checked={darkmode} on:change={toggleDarkModeSave} style="margin: 3px 0px 0px 10px;" />
 </div>
 
-{#if !showDialog && !showNewTemplate && !showEditTemplate && !showNotes }
+{#if !showConfirm && !showDialog && !showNewTemplate && !showEditTemplate && !showNotes }
 
 {#if !expert}
 Welcome to the Project Manager for Fig. Here, you can go to your projects, run scripts, and much more.
@@ -784,6 +804,14 @@ it will push to GitHub. You don't have to be in the root directory of the projec
 
 {/if}
 
+<ButtonElement show={!expert} buttonFunction={() => {showConfirm = true; confirmFunction = deleteProject; }} buttonName="Delete Project" styles={styles} darkmode={darkmode}>
+
+#### Delete Project
+
+This button will delete the currently selected project. This will not remove the files form the file system. It will only delete the project information.
+
+</ButtonElement>
+
 <ButtonElement show={!expert} buttonFunction={editTemplates} buttonName="Edit Templates" styles={styles} darkmode={darkmode}>
 
 #### Edit Template
@@ -820,12 +848,13 @@ Each template has the following data structure:
 
 #### Select Template:
 
-<select bind:value={useTemplate} on:change={setTemplateToEdit} style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};">
-  <option value='none'>None</option>
-  {#each templates as template}
-    <option value={template.name}>{template.name}</option>
-  {/each}
-</select>
+<TemplateSelector 
+  templates={templates} 
+  template={useTemplate} 
+  on:templateChange={(data) => { useTemplate = data.detail; if(useTemplate !== 'None') setTemplateToEdit(); }} 
+  darkmode={darkmode} 
+  styles={styles} 
+/>
 
 #### Template Items:
 
@@ -917,24 +946,46 @@ Here is a list of all project notes. You can edit a note, delete a note, or crea
 />
 
 <button style="margin: 5px; padding: 3px; background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" on:click={() => { showNotes = false;}} >Exit Notes</button>
+
+{:else if showConfirm}
+
+# Deleting Project : {currentProject}
+
+## Are You SURE?
+
+<div style="display: flex; flex-direction: row; margin: 10px 0px 0px 0px;">
+<button style="margin: 5px; padding: 3px; background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" on:click={() => { showConfirm = false; }} >No</button>
+<button style="margin: 5px; padding: 3px; background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" on:click={() => { showConfirm = false; if(confirmFunction !== null) confirmFunction(); }} >Yes</button>
+</div>
+
 {:else}
+
 
 ### Give a name for the Project: 
 
 <input type="text" bind:value={currentProject} style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" />
 
+### In Directory:  
+
+{currentProjectDir}
+
 ### Use Template
 
-If you want to install a template, change from 'none' to the template you want to use.
+If you want to install a template, change from 'None' to the template you want to use.
 
-<select bind:value={useTemplate} style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" >
-  <option value='none'>None</option>
-  {#each templates as template}
-    <option value={template.name}>{template.name}</option>
-  {/each}
-</select>
+<TemplateSelector 
+  templates={templates} 
+  template={useTemplate} 
+  on:templateChange={(data) => { useTemplate = data.detail; }} 
+  darkmode={darkmode} 
+  styles={styles} 
+/>
 
-<button style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" on:click={() => {showDialog = false; runCleanUp(); }}>Return</button>
+<div style="display: flex; flex-direction: row; margin: 10px 0px 0px 0px;">
+  <button style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" on:click={() => {showDialog = false; currentProject = '';}}>Return</button>
+  <button style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" on:click={() => {showDialog = false; console.log("Using template: " + useTemplate); runCleanUp(); }}>Create Project</button>
+</div>
+
 {/if}
 
 </div>
