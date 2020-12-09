@@ -58,6 +58,8 @@
       //
       console.log('/bin/ls "' + pjdir + '/.notes/"');
       fig.execute('/bin/ls "' + pjdir + '/.notes/"', (data, err) => {
+        console.log(data);
+        console.log(err);
         if(!err) {
           if(data.includes('No such file')) {
             fig.execute('/bin/mkdir "' + pjdir + '/.notes/"', (data, err) => {
