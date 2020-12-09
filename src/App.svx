@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
 
   import ProjectSelector from './components/ProjectSelector.svelte';
+  import TemplateSelector from './components/TemplateSelector.svelte';
   import ButtonElement from './components/ButtonElement.svelte';
   import NoteList from './components/NoteList.svelte';
   
@@ -728,7 +729,7 @@ after the script in the variable `Script` is ran. The script variable is automat
 
 </ButtonElement>
 
-<ButtonElement show={!expert} buttonFunction={setDirAsTemplate} buttonName="Set Current Directory as Templage" styles={styles} darkmode={darkmode}>
+<ButtonElement show={!expert} buttonFunction={setDirAsTemplate} buttonName="Set Current Directory as Template" styles={styles} darkmode={darkmode}>
 
 #### Set the Current Directory as a Template
 
@@ -820,12 +821,7 @@ Each template has the following data structure:
 
 #### Select Template:
 
-<select bind:value={useTemplate} on:change={setTemplateToEdit} style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};">
-  <option value='none'>None</option>
-  {#each templates as template}
-    <option value={template.name}>{template.name}</option>
-  {/each}
-</select>
+<TemplateSelector template={useTemplate} templates={templates} on:templateChange={(e) => { useTemplate = e.detail; setTemplateToEdit(); }} darkmode={darkmode} styles={styles} /> 
 
 #### Template Items:
 
@@ -927,12 +923,7 @@ Here is a list of all project notes. You can edit a note, delete a note, or crea
 
 If you want to install a template, change from 'none' to the template you want to use.
 
-<select bind:value={useTemplate} style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" >
-  <option value='none'>None</option>
-  {#each templates as template}
-    <option value={template.name}>{template.name}</option>
-  {/each}
-</select>
+<TemplateSelector template={useTemplate} templates={templates} on:templateChange={(e) => { useTemplate = e.detail; setTemplateToEdit(); }} darkmode={darkmode} styles={styles} /> 
 
 <button style="background-color: {darkmode ? styles.DMbkgrdcolor : styles.bkgrdcolor}; color: {darkmode ? styles.DMcolor : styles.color};" on:click={() => {showDialog = false; runCleanUp(); }}>Return</button>
 {/if}
