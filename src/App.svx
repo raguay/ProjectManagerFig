@@ -169,8 +169,8 @@
         //
         // They don't have the file. Use the environment editor.
         //
-        fig.execute(fig.env.EDITOR + " '" + file + "'", (out, err) => {
-          if(lastCommand !== null) fig.execute(lastCommand, (data,err) => {});
+        fig.stream(fig.env.EDITOR + " '" + file + "'", (out, err) => {
+          if(lastCommand !== null) fig.stream(lastCommand, (data,err) => {});
         });
       } else {
         //
@@ -179,12 +179,12 @@
         //
         var editor = data.trim();
         if(data[0] === '/') {
-          fig.execute("open -a '" + editor + "' '" + file + "'", (out, err) => {
-            if(lastCommand !== null) fig.execute(lastCommand, (data,err)=>{});
+          fig.stream("open -a '" + editor + "' '" + file + "'", (out, err) => {
+            if(lastCommand !== null) fig.stream(lastCommand, (data,err)=>{});
           });
         } else {
-          fig.execute(editor + " '" + file + "'", (out, err) => {
-            if(lastCommand !== null) fig.execute(lastCommand, (data,err) => {});
+          fig.stream(editor + " '" + file + "'", (out, err) => {
+            if(lastCommand !== null) fig.stream(lastCommand, (data,err) => {});
           });
         }
       }
@@ -341,7 +341,7 @@
     //
     // Create the startup script as a blank executable file.
     //
-    fig.execute('touch "' + currentProjectDir + '/.startproject"; chmod a+x "' + currentProjectDir + '/.startproject";', (out, err) => {});
+    fig.stream('touch "' + currentProjectDir + '/.startproject"; chmod a+x "' + currentProjectDir + '/.startproject";', (out, err) => {});
 
     //
     // If using template, then copy it into place.
@@ -420,7 +420,7 @@
   
   function EditProjectScript() {
     var psf = currentProjectDir + "/.startproject";
-    fig.execute('/bin/chmod a-x "' + psf + '"',(data,err) => {
+    fig.stream('/bin/chmod a-x "' + psf + '"',(data,err) => {
       runEditor((psf), '/bin/chmod a+x "' + psf + '"');
     });
   }

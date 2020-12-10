@@ -1,16 +1,13 @@
-## Project Manager for Fig
+# Project Manager for Fig
 
-This is a ongoing project to create the ultimate project management addon to 
-fig. I am constantly adding to it with new ideas.
+Things that work:
 
-### Current Working
+- Run mask, gulp, and npm scripts
+- Run project start strip
+- Edit the project start, mask, gulp, and npm scripts
+- Create new projects with or without templates
+- Add/Edit Templates
 
-- testing....
-- Adding new templates in the Edit Templates isn't working.
-- It is possible to add the same template more than once.
-- Seems to be an issue showing the notes.
+Things that I'm working on:
 
-### Finished
-
-- Add the ability to use the project notes created by the fman plugin Notes. 
-
+- Project Notes

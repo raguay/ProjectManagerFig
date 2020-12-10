@@ -43,8 +43,9 @@
 
   function createNewNote() {
     if(newfilename !== '') {
-      fig.execute('/usr/bin/touch "' + projectDir + '/.notes/' + newfilename + '";', (data, err) => {
-        notes = notes.push(projectDir + '/.notes/' + newfilename);
+      fig.stream('/usr/bin/touch "' + projectDir + '/.notes/' + newfilename + '";', (data, err) => {
+        notes.push(projectDir + '/.notes/' + newfilename);
+        notes = notes;
         newfilename = '';
       });
     }
@@ -56,19 +57,30 @@
       //
       // Get a list of note files in the project.
       //
-      console.log('/bin/ls "' + pjdir + '/.notes/"');
-      fig.execute('/bin/ls "' + pjdir + '/.notes/"', (data, err) => {
-        console.log(data);
-        console.log(err);
-        if(!err) {
-          if(data.includes('No such file')) {
-            fig.execute('/bin/mkdir "' + pjdir + '/.notes/"', (data, err) => {
+      var lsOutput = [];
+      fig.stream('/bin/ls "' + pjdir + '/.notes/"', (data, err) => {
+        if(err) {
+          fig.stream('/bin/mkdir "' + pjdir + '/.notes/"', (data, err) => {
+            notes = [];
+          });
+        } else {
+          if((data !== null) && (data.includes('No such file'))) {
+            fig.stream('/bin/mkdir "' + pjdir + '/.notes/"', (data, err) => {
               notes = [];
             });
           } else {
-            notes = data.split('\n').filter(item => ((item[0] !== '.')&&(item !== ''))).map(item => {
-              return(pjdir + "/.notes/" + item);
-            });
+            if(data === null) {
+              notes = lsOutput.filter(item => ((item[0] !== '.')&&(item !== ''))).map(item => {
+                return(pjdir + "/.notes/" + item);
+              });
+            } else {
+              data = data.split('\n');
+              if(data.length > 1) {
+                data.forEach(item => lsOutput.push(item));
+              } else {
+                lsOutput.push(data[0]);
+              }
+            }
           }
         }
       });
@@ -76,7 +88,7 @@
   }
 
   function deleteNote(note) {
-    fig.execute('/bin/rm "' + note + '"', (data,err) => {
+    fig.stream('/bin/rm "' + note + '"', (data,err) => {
       notes = notes.filter(item => !item.includes(note));
     });
   }
